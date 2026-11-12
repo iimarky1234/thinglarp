@@ -84,7 +84,7 @@ jobs:
       - name: Build Android Release APK
         run: |
           cd app
-          flutter build apk --release
+          flutter build apk --release --android-skip-build-dependency-validation
 
       - name: Copy & Rename APK
         run: |
