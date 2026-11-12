@@ -18,8 +18,8 @@ Ensure you have the following installed on your host machine:
 ## 1. Clone the Repository & Configure Environment
 
 ```bash
-git clone https://github.com/your-username/thinglarp-fr.git
-cd thinglarp-fr
+git clone https://github.com/iimarky1234/thinglarp.git
+cd thinglarp
 ```
 
 Copy the example environment configuration:

@@ -2,6 +2,8 @@ site_name: ThingLarp IoT Platform
 site_url: https://thinglarp.iimarky123.io.vn
 site_description: Production-grade, unconstrained IoT telemetry platform alternative to ThingSpeak
 site_author: ThingLarp Contributors
+repo_name: iimarky1234/thinglarp
+repo_url: https://github.com/iimarky1234/thinglarp
 docs_dir: docs
 
 theme:

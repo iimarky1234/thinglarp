@@ -1,6 +1,7 @@
 # ThingLarp IoT Platform
 
 [![Documentation](https://img.shields.io/badge/docs-thinglarp.iimarky123.io.vn-blue?style=for-the-badge&logo=materialformkdocs)](https://thinglarp.iimarky123.io.vn)
+[![GitHub](https://img.shields.io/badge/GitHub-iimarky1234%2Fthinglarp-181717?style=for-the-badge&logo=github)](https://github.com/iimarky1234/thinglarp)
 [![Docker Compose](https://img.shields.io/badge/Docker%20Compose-v2-2496ED?style=for-the-badge&logo=docker)](docker-compose.yml)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](api/)
 [![TimescaleDB](https://img.shields.io/badge/TimescaleDB-FDB515?style=for-the-badge&logo=postgresql&logoColor=black)](db/)
@@ -117,8 +118,10 @@ flowchart TD
 
 ## 🚀 Quickstart
 
-### 1. Configure Environment
+### 1. Clone & Configure Environment
 ```bash
+git clone https://github.com/iimarky1234/thinglarp.git
+cd thinglarp
 cp .env.example .env
 chmod 600 .env
 # Edit .env with your domain names and database credentials
