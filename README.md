@@ -1,28 +1,45 @@
 # ThingLarp IoT Platform
 
-[![Documentation](https://img.shields.io/badge/docs-thinglarp.iimarky123.io.vn-blue?style=for-the-badge&logo=materialformkdocs)](https://thinglarp.iimarky123.io.vn)
+[![Web Dashboard](https://img.shields.io/badge/Web%20Dashboard-thinglarp.iimarky123.io.vn%2Fapp-4CAF50?style=for-the-badge&logo=googlechrome&logoColor=white)](https://thinglarp.iimarky123.io.vn/app/)
+[![Documentation](https://img.shields.io/badge/Docs-thinglarp.iimarky123.io.vn%2Fdocs-blue?style=for-the-badge&logo=materialformkdocs)](https://thinglarp.iimarky123.io.vn/docs/)
+[![Swagger API](https://img.shields.io/badge/Swagger%20API-api.iimarky123.io.vn-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://api.iimarky123.io.vn/docs)
 [![GitHub](https://img.shields.io/badge/GitHub-iimarky1234%2Fthinglarp-181717?style=for-the-badge&logo=github)](https://github.com/iimarky1234/thinglarp)
 [![Docker Compose](https://img.shields.io/badge/Docker%20Compose-v2-2496ED?style=for-the-badge&logo=docker)](docker-compose.yml)
-[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](api/)
 [![TimescaleDB](https://img.shields.io/badge/TimescaleDB-FDB515?style=for-the-badge&logo=postgresql&logoColor=black)](db/)
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?style=for-the-badge&logo=flutter&logoColor=white)](app/)
 
 **ThingLarp** is a high-performance, completely unconstrained IoT telemetry and analytics platform built as an open-source, modern alternative to ThingSpeak.
 
-> 📖 **Full Documentation & Guides:** [https://thinglarp.iimarky123.io.vn](https://thinglarp.iimarky123.io.vn)
+> 🌐 **Live Web Application:** [https://thinglarp.iimarky123.io.vn/app/](https://thinglarp.iimarky123.io.vn/app/)  
+> 📖 **User Documentation:** [https://thinglarp.iimarky123.io.vn/docs/](https://thinglarp.iimarky123.io.vn/docs/)  
+> 📦 **Client App Releases:** [https://github.com/iimarky1234/thinglarp/releases](https://github.com/iimarky1234/thinglarp/releases)  
 >
-> ⚡ **Disclaimer:** This project was mostly **vibe coded** by **Antigravity** (Google DeepMind's agentic AI assistant) in collaboration with **@iimarky123**. While built with production-grade architectural patterns, microservices, and end-to-end test verification, make sure to review configurations and security secrets before deploying to critical production environments!
+> ⚡ **Disclaimer:** This project was mostly **vibe coded** by **Antigravity** (Google DeepMind's agentic AI assistant) in collaboration with **@iimarky123**. Built with production-grade architectural patterns, microservices, and end-to-end test verification.
+
+---
+
+## 🌐 Public Endpoints
+
+| Service | Public Endpoint | Description |
+| :--- | :--- | :--- |
+| **Landing & Downloads** | [`https://thinglarp.iimarky123.io.vn/`](https://thinglarp.iimarky123.io.vn/) | Platform overview & client app downloads |
+| **Web Dashboard** | [`https://thinglarp.iimarky123.io.vn/app/`](https://thinglarp.iimarky123.io.vn/app/) | Official Web SPA dashboard & public channel viewer |
+| **User Documentation** | [`https://thinglarp.iimarky123.io.vn/docs/`](https://thinglarp.iimarky123.io.vn/docs/) | Comprehensive MkDocs usage & hardware guides |
+| **REST API Gateway** | [`https://api.iimarky123.io.vn`](https://api.iimarky123.io.vn) | Ingestion & management REST API (Swagger at `/docs`) |
+| **MQTT Broker (TCP TLS)** | `mqtt.iimarky123.io.vn:8883` | Direct MQTTS for ESP32, microcontrollers & native apps |
+| **MQTT Broker (WebSockets)** | `wss://mqtt.iimarky123.io.vn/mqtt` | Secure WebSockets (port 443) for browser dashboards |
 
 ---
 
 ## 🌟 Key Highlights
 
-- **Zero Artificial Rate Limits:** High-frequency sensors (vibration, acoustics, motor RPM) can stream telemetry continuously at 50Hz–100Hz without being throttled to legacy 15-second windows.
-- **Unlimited Dynamic Fields:** No restriction to fixed `field1`...`field8` slots. Devices publish arbitrary JSON payloads (`{"temp": 24.2, "co2_ppm": 420, "gyro_z": -0.012}`). Fields are dynamically discovered, indexed, and charted on the fly.
-- **Strict Multi-Tenant ACLs:** Broker-level security powered by `mosquitto-go-auth` and PostgreSQL views. Devices can only publish to their assigned channel; dashboards can only subscribe to owned or public channels.
-- **TimescaleDB Continuous Aggregates:** Ingests raw points into compressed hypertables with background 1-minute (`telemetry.points_1m`) and 1-hour (`telemetry.points_1h`) rollups for millisecond chart rendering across millions of rows.
-- **Dual-Ingress Parity:** HTTP REST writes (`POST /channels/{id}/data`) publish directly to the internal MQTT broker so live subscribers see updates instantly.
-- **Cross-Platform Flutter Dashboard:** Native client for Linux Desktop, macOS, Windows, Android, iOS, and Web featuring real-time MQTT streaming, dynamic metric badges, and interactive time-series charts.
+- **Zero Artificial Rate Limits:** Stream telemetry at 50Hz–100Hz without artificial 15-second wait times.
+- **Unlimited Dynamic Fields:** No arbitrary limit to 8 predefined fields. Publish any valid JSON payload (`{"temp": 24.2, "humidity": 60, "vibration_x": 0.05}`) and fields are discovered and graphed dynamically.
+- **1-Click Public Channel Sharing:** Generate unique, secure tokenized links (`/app/?public_token=...`) to share live telemetry and charts with clients or teammates without requiring an account.
+- **High-Performance TimescaleDB Engine:** Telemetry is written directly to TimescaleDB hypertables with automated continuous aggregates (`points_1m`, `points_1h`) for real-time downsampling across millions of points.
+- **Bi-Directional Telemetry & Downlinks:** Ingest sensor data and send commands down to microcontrollers and relays (`channels/{id}/commands`).
+- **Dual-Ingress Parity:** Send data over HTTP REST (`POST /channels/{id}/data`) or MQTT (`channels/{id}/messages`) seamlessly with real-time broker synchronization.
+- **Cross-Platform Client Suite:** Responsive Flutter client running natively in the browser (Web SPA/PWA) and on Android, Linux, Windows, macOS, and iOS.
 
 ---
 
@@ -30,69 +47,42 @@
 
 ```mermaid
 flowchart TD
-    %% ==========================================
-    %% TIER 1: CLIENTS
-    %% ==========================================
-    subgraph CLIENTS ["1. EDGE CLIENTS & HARDWARE"]
+    subgraph CLIENTS ["1. CLIENTS & HARDWARE"]
         direction LR
-        ESP["<b>ESP32 / IoT Hardware Nodes</b><br/><i>Sensors, MicroPython, Arduino C++</i><br/><code>Topic: channels/{id}/data</code>"]
-        APP["<b>Flutter Cross-Platform Application</b><br/><i>Desktop • Mobile • Web</i><br/><code>Live MQTT Stream & REST Dashboard</code>"]
+        ESP["ESP32 / MicroPython / Hardware Nodes<br/>MQTTS :8883 / HTTPS :443"]
+        APP["Flutter Cross-Platform Client<br/>Web SPA / Desktop / Android"]
+        VIEWER["Public Viewers<br/>Web Browser via Token Link"]
     end
 
-    %% ==========================================
-    %% TIER 2: EDGE PROXY & INGRESS
-    %% ==========================================
-    subgraph EDGE ["2. EDGE INGRESS & TLS TERMINATION"]
-        TRAEFIK["<b>Traefik v3 Reverse Proxy</b><br/><i>Automated Let's Encrypt TLS Certificates</i><br/><code>Ports: :8883 (MQTTS) • :443 (HTTPS/WSS) • :80 (ACME)</code>"]
+    subgraph EDGE ["2. EDGE INGRESS & TLS"]
+        TRAEFIK["Traefik v3 Reverse Proxy<br/>Automated Let's Encrypt TLS<br/>Ports: :443 (HTTPS/WSS) • :8883 (MQTTS)"]
     end
 
-    %% ==========================================
-    %% TIER 3: MESSAGING & ROUTING
-    %% ==========================================
-    subgraph MESSAGING ["3. MQTT MESSAGING FABRIC"]
-        MOSQ["<b>Eclipse Mosquitto Broker</b><br/><i>High-concurrency pub/sub with mosquitto-go-auth</i><br/><code>Dynamic PostgreSQL ACLs & In-Memory TTL Caching</code>"]
+    subgraph WEB_SVC ["3. WEB FRONTEND"]
+        NGINX["Nginx Web Container<br/>/ &rarr; Landing Page<br/>/app/ &rarr; Flutter Web Dashboard<br/>/docs/ &rarr; MkDocs Documentation"]
     end
 
-    %% ==========================================
-    %% TIER 4: BACKEND PROCESSING & STORAGE
-    %% ==========================================
-    subgraph PROCESSING ["4. INGESTION & RELATIONAL STORAGE"]
-        direction LR
-        BRIDGE["<b>Python Ingestion Bridge</b><br/><i>aiomqtt + orjson</i><br/><code>$share/ingest/channels/+/data</code><br/><i>Micro-batch COPY Buffer</i>"]
-        API["<b>FastAPI REST Gateway</b><br/><i>JWT & Argon2id Auth</i><br/><i>Auto-downsampling Engine</i><br/><i>Direct MQTT Forwarder</i>"]
-        DB[("<b>PostgreSQL 16 + TimescaleDB</b><br/><i>Relational Metadata (app)</i><br/><i>Hypertables (telemetry.points)</i><br/><i>Continuous Aggregates (1m / 1h)</i>")]
+    subgraph MESSAGING ["4. MESSAGING FABRIC"]
+        MOSQ["Eclipse Mosquitto 2.x<br/>mosquitto-go-auth Plugin<br/>Dynamic PostgreSQL ACLs & TTL Caching"]
     end
 
-    %% Client traffic
-    ESP ==>|"MQTTS :8883 (Publish Telemetry)"| TRAEFIK
-    APP ==>|"MQTTS :8883 / WSS :443 (Live Stream)"| TRAEFIK
-    APP ==>|"HTTPS :443 (REST API & Auth)"| TRAEFIK
+    subgraph BACKEND ["5. SERVICES & TIMESCALEDB"]
+        BRIDGE["Python Ingestion Bridge<br/>aiomqtt + orjson<br/>COPY Buffer Flush &rarr; TimescaleDB"]
+        API["FastAPI REST Gateway<br/>JWT/Argon2id Auth • Downsampler<br/>Direct MQTT Forwarder"]
+        DB[("PostgreSQL 16 + TimescaleDB<br/>Relational Metadata<br/>Hypertables & Continuous Aggregates")]
+    end
 
-    %% Ingress to Broker & API
-    TRAEFIK ==>|"TCP :1883"| MOSQ
-    TRAEFIK ==>|"HTTP :8000"| API
+    CLIENTS ==>|"TLS Encrypted Traffic"| TRAEFIK
+    TRAEFIK ==>|"HTTP /docs, /app, /"| NGINX
+    TRAEFIK ==>|"HTTP /api"| API
+    TRAEFIK ==>|"TCP :1883 & WSS :443"| MOSQ
 
-    %% Internal messaging
-    MOSQ <===>|"Bcrypt Auth & Topic ACL Queries"| DB
-    MOSQ ==>|"Shared Load-Balanced Ingestion"| BRIDGE
-    API -.->|"Forward HTTP Writes"| MOSQ
+    MOSQ <===>|"Auth & ACL Queries"| DB
+    MOSQ ==>|"Shared Subscription"| BRIDGE
+    API -.->|"Forward HTTP Ingestion"| MOSQ
 
-    %% Storage writes & queries
-    BRIDGE ===>|"Binary COPY Flush (2,000 pts / 500ms)"| DB
-    API <===>|"Metadata CRUD & Analytical Rollups"| DB
-
-    %% Custom High-Visibility Styling
-    classDef clientStyle fill:#1e293b,stroke:#38bdf8,stroke-width:3px,color:#ffffff;
-    classDef edgeStyle fill:#0f172a,stroke:#06b6d4,stroke-width:3px,color:#ffffff;
-    classDef brokerStyle fill:#1e1e24,stroke:#f59e0b,stroke-width:3px,color:#ffffff;
-    classDef serviceStyle fill:#1e1b4b,stroke:#a855f7,stroke-width:3px,color:#ffffff;
-    classDef dbStyle fill:#064e3b,stroke:#10b981,stroke-width:3px,color:#ffffff;
-
-    class ESP,APP clientStyle;
-    class TRAEFIK edgeStyle;
-    class MOSQ brokerStyle;
-    class BRIDGE,API serviceStyle;
-    class DB dbStyle;
+    BRIDGE ===>|"High-Speed Batch COPY"| DB
+    API <===>|"Relational Queries & Analytics"| DB
 ```
 
 ---
@@ -101,17 +91,18 @@ flowchart TD
 
 ```text
 .
-├── docker-compose.yml        # Multi-container orchestration (5 microservices)
-├── .env.example              # Centralized environment configuration template
-├── api/                      # FastAPI Gateway (Auth, Channels, Devices, Keys, Data)
-├── bridge/                   # High-throughput asynchronous Python Ingestion Bridge
-├── mosquitto/                # Mosquitto config with mosquitto-go-auth plugin & caching
-├── traefik/                  # Traefik v3 reverse proxy & automated Let's Encrypt TLS
-├── db/                       # PostgreSQL & TimescaleDB initialization scripts (01-03)
-├── app/                      # Cross-platform Flutter client (Mobile/Desktop/Web)
-├── docs/                     # Comprehensive MkDocs documentation source
-├── mkdocs.yml                # MkDocs Material theme & site configuration
-└── scripts/                  # Automated E2E verification & live waveform generators
+├── docker-compose.yml        # Orchestration for all 6 microservices
+├── .env.example              # Centralized environment template
+├── api/                      # FastAPI REST Gateway (Auth, Channels, Data, Public Links)
+├── app/                      # Flutter multiplatform client (Web, Android, Desktop)
+├── bridge/                   # Asynchronous Python MQTT Ingestion Bridge (aiomqtt + asyncpg)
+├── db/                       # Database initialization schemas, hypertables & migrations
+├── docs/                     # User-focused MkDocs documentation source
+├── mkdocs.yml                # Material theme documentation configuration
+├── mosquitto/                # Mosquitto config with dynamic PostgreSQL ACL plugin
+├── scripts/                  # Synthetic waveform generators & test suites
+├── traefik/                  # Traefik v3 reverse proxy config & TLS rules
+└── web/                      # Nginx frontend hosting landing page, /app/, and /docs/
 ```
 
 ---
@@ -126,49 +117,58 @@ cp .env.example .env
 chmod 600 .env
 # Edit .env with your domain names and database credentials
 ```
-> For a full explanation of every configuration setting, see the [Environment Configuration Guide](https://thinglarp.iimarky123.io.vn/guides/env_configuration/).
 
-### 2. Start the Backend Infrastructure
+### 2. Launch the Stack
 ```bash
 docker compose up -d --build
 ```
 
-Verify that all 5 containers are running:
+Verify that all 6 containers are healthy:
 ```bash
 docker compose ps
 ```
 
-### 3. Launch the Flutter Application
-```bash
-cd app/
-flutter run -d linux
-```
-*Default Administrator Credentials:*
-- **Username:** `admin`
-- **Password:** `admin123456`
-*(You can also register any new account directly from the app screen).*
+### 3. Access the Dashboard
+- **Web App:** Open [https://thinglarp.iimarky123.io.vn/app/](https://thinglarp.iimarky123.io.vn/app/) (or `http://localhost/app/` if running locally).
+- **Default Admin Account:**
+  - **Username:** `admin`
+  - **Password:** `admin123456`
+  *(You can also register any new account directly from the login screen).*
 
-### 4. Run Live Waveform Streamer (Optional)
-To animate real-time charts in the Flutter app without physical hardware:
+### 4. Send Test Telemetry
+
+#### Via HTTP REST (cURL):
 ```bash
-./scripts/stream_generator.py --channel 1 --key <YOUR_WRITE_API_KEY> --interval 1.5
+curl -X POST "https://api.iimarky123.io.vn/channels/1/data" \
+  -H "X-API-Key: YOUR_WRITE_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"temperature": 24.5, "humidity": 58.2, "co2": 415}'
+```
+
+#### Via Synthetic Stream Generator (Python):
+```bash
+./scripts/stream_generator.py --channel 1 --key YOUR_WRITE_API_KEY --interval 1.0
 ```
 
 ---
 
-## 📚 Complete Documentation
+## 📚 Documentation & Integration Guides
 
-All architectural designs, hardware provisioning examples, API references, and security models are published at:
+Complete step-by-step guides, code snippets, and API specifications are published at:
 
-👉 **[https://thinglarp.iimarky123.io.vn](https://thinglarp.iimarky123.io.vn)**
+👉 **[https://thinglarp.iimarky123.io.vn/docs/](https://thinglarp.iimarky123.io.vn/docs/)**
 
-- **[System Architecture](https://thinglarp.iimarky123.io.vn/architecture/overview/)**
-- **[Interactive Block Diagrams](https://thinglarp.iimarky123.io.vn/architecture/block_diagrams/)**
-- **[Database & TimescaleDB Hypertables](https://thinglarp.iimarky123.io.vn/architecture/database/)**
-- **[Hardware Provisioning (ESP32, MicroPython, Python)](https://thinglarp.iimarky123.io.vn/guides/hardware_provisioning/)**
-- **[REST API Reference](https://thinglarp.iimarky123.io.vn/reference/api_reference/)**
-- **[MQTT Topics & Permissions](https://thinglarp.iimarky123.io.vn/reference/mqtt_topics/)**
-- **[Environment Variables Reference](https://thinglarp.iimarky123.io.vn/reference/environment_variables/)**
+- **[Getting Started & Dynamic Fields](https://thinglarp.iimarky123.io.vn/docs/getting_started/)**
+- **[Dashboard Tuning & Widgets](https://thinglarp.iimarky123.io.vn/docs/dashboard/)**
+- **[1-Click Public Link Sharing](https://thinglarp.iimarky123.io.vn/docs/public_sharing/)**
+- **[Sending Data via HTTP](https://thinglarp.iimarky123.io.vn/docs/sending_data_http/)**
+- **[Sending Data via MQTT](https://thinglarp.iimarky123.io.vn/docs/sending_data_mqtt/)**
+- **[ESP32 & ESP8266 Arduino Guide](https://thinglarp.iimarky123.io.vn/docs/hardware/esp32/)**
+- **[MicroPython Integration (ESP32 / Pico W)](https://thinglarp.iimarky123.io.vn/docs/hardware/micropython/)**
+- **[Python Edge Gateway Guide](https://thinglarp.iimarky123.io.vn/docs/hardware/python/)**
+- **[Downlink Actuator Commands](https://thinglarp.iimarky123.io.vn/docs/hardware/commands/)**
+- **[REST API Reference](https://thinglarp.iimarky123.io.vn/docs/reference/api_reference/)**
+- **[MQTT Topics & ACL Rules](https://thinglarp.iimarky123.io.vn/docs/reference/mqtt_topics/)**
 
 ---
 
