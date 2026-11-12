@@ -9,6 +9,7 @@ import '../models/channel.dart';
 import '../models/telemetry.dart';
 import '../providers/channel_provider.dart';
 import '../services/mqtt_service.dart';
+import '../config.dart';
 import 'api_tutorial_screen.dart';
 
 class ChannelDetailScreen extends StatefulWidget {
@@ -36,7 +37,7 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
   }
 
   void _showAddDeviceDialog() {
-    final nameCtrl = TextEditingController(text: 'ESP32_Node_1');
+    final nameCtrl = TextEditingController();
     String scope = 'publish';
 
     showDialog(
@@ -52,7 +53,7 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
                 controller: nameCtrl,
                 decoration: const InputDecoration(
                   labelText: 'Device Name',
-                  hintText: 'e.g. Field Sensor Node',
+                  hintText: 'e.g. ESP32 Node 1',
                 ),
               ),
               const SizedBox(height: 16),
@@ -708,37 +709,190 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
   }
 
   void _showCredentialsDialog(Device dev) {
+    final config = AppConfig();
+    Device currentDev = dev;
+
     showDialog(
       context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.vpn_key, color: Colors.amber),
-            SizedBox(width: 8),
-            Text('Device Credentials'),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.vpn_key, color: Colors.amber),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('Device Credentials (${currentDev.name})', overflow: TextOverflow.ellipsis),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 480,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'These credentials allow your IoT hardware node to authenticate with the ThingLarp MQTT broker. You can view or copy them anytime.',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 16),
+                  _CopyableField(label: 'MQTT Broker Host', value: config.mqttHost),
+                  const SizedBox(height: 10),
+                  _CopyableField(label: 'Port (TLS / Standard)', value: '${config.mqttPort} (MQTTS 8883 / MQTT 1883)'),
+                  const SizedBox(height: 10),
+                  _CopyableField(label: 'MQTT Username', value: currentDev.mqttUsername),
+                  const SizedBox(height: 10),
+                  _CopyableField(label: 'MQTT Password', value: currentDev.mqttPassword ?? 'Not saved (Legacy)'),
+                  const SizedBox(height: 10),
+                  _CopyableField(label: 'Telemetry Publish Topic', value: 'channels/${widget.channel.id}/data'),
+                  const SizedBox(height: 10),
+                  _CopyableField(label: 'Downlink Subscribe Topic', value: 'channels/${widget.channel.id}/commands'),
+                  const SizedBox(height: 10),
+                  _CopyableField(label: 'Permission Scope', value: currentDev.scope.toUpperCase()),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton.icon(
+              icon: const Icon(Icons.refresh, size: 16, color: Colors.amberAccent),
+              label: const Text('Reset Password'),
+              onPressed: () async {
+                final confirm = await showDialog<bool>(
+                  context: ctx,
+                  builder: (c) => AlertDialog(
+                    title: const Text('Reset Device Password?'),
+                    content: Text('Generate a new MQTT password for "${currentDev.name}"? Any active connection with the old password will be rejected.'),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.amber.shade800, foregroundColor: Colors.white),
+                        onPressed: () => Navigator.pop(c, true),
+                        child: const Text('Generate New Password'),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (confirm == true && ctx.mounted) {
+                  try {
+                    final provider = ctx.read<ChannelProvider>();
+                    final updated = await provider.apiService.resetDevicePassword(widget.channel.id, currentDev.id);
+                    await provider.loadDevices(widget.channel.id);
+                    setDialogState(() {
+                      currentDev = updated;
+                    });
+                    if (ctx.mounted) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        const SnackBar(content: Text('Device password reset successfully!')),
+                      );
+                    }
+                  } catch (e) {
+                    if (ctx.mounted) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        SnackBar(content: Text('Failed to reset password: $e')),
+                      );
+                    }
+                  }
+                }
+              },
+            ),
+            TextButton.icon(
+              icon: const Icon(Icons.code, size: 18),
+              label: const Text('MQTT Code Examples'),
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ApiTutorialScreen(
+                      channel: widget.channel,
+                      initialTabIndex: 3,
+                    ),
+                  ),
+                );
+              },
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Close'),
+            ),
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+      ),
+    );
+  }
+
+  void _showApiKeyDetailsDialog(ApiKeyItem key) {
+    final config = AppConfig();
+    final fullKey = key.apiKey ?? '${key.prefix}***';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
           children: [
-            const Text(
-              'Copy these credentials now. The MQTT password is only shown once and cannot be retrieved later.',
-              style: TextStyle(color: Colors.redAccent, fontSize: 13),
+            Icon(
+              key.scope == 'write' ? Icons.upload : Icons.download,
+              color: key.scope == 'write' ? Colors.greenAccent : Colors.blueAccent,
             ),
-            const SizedBox(height: 16),
-            _CopyableField(label: 'MQTT Username', value: dev.mqttUsername),
-            const SizedBox(height: 12),
-            _CopyableField(label: 'MQTT Password', value: dev.mqttPassword ?? 'N/A'),
-            const SizedBox(height: 12),
-            _CopyableField(label: 'Topic', value: 'channels/${widget.channel.id}/data'),
+            const SizedBox(width: 8),
+            Text('${key.scope.toUpperCase()} API Key Details'),
           ],
+        ),
+        content: SizedBox(
+          width: 500,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Use this API key to authenticate HTTP REST requests with the ThingLarp API.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(height: 16),
+                _CopyableField(label: 'API Base URL', value: config.apiUrl),
+                const SizedBox(height: 10),
+                _CopyableField(label: 'Channel ID', value: widget.channel.id.toString()),
+                const SizedBox(height: 10),
+                _CopyableField(label: 'API Key (X-API-Key)', value: fullKey),
+                const SizedBox(height: 10),
+                _CopyableField(label: 'HTTP Auth Header', value: 'X-API-Key: $fullKey'),
+                const SizedBox(height: 10),
+                _CopyableField(
+                  label: key.scope == 'write' ? 'Telemetry Ingest Endpoint' : 'Telemetry Query Endpoint',
+                  value: '${config.apiUrl}/channels/${widget.channel.id}/data',
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  key.scope == 'write' ? 'Sample Ingest Command (cURL):' : 'Sample Query Command (cURL):',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.black26,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+                  ),
+                  child: SelectableText(
+                    key.scope == 'write'
+                        ? 'curl -X POST "${config.apiUrl}/channels/${widget.channel.id}/data" \\\n  -H "Content-Type: application/json" \\\n  -H "X-API-Key: $fullKey" \\\n  -d \'{"temp": 24.5, "humidity": 60}\''
+                        : 'curl -X GET "${config.apiUrl}/channels/${widget.channel.id}/data?resolution=auto" \\\n  -H "X-API-Key: $fullKey"',
+                    style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
         actions: [
           TextButton.icon(
-            icon: const Icon(Icons.code, size: 18),
-            label: const Text('MQTT Code Examples'),
+            icon: const Icon(Icons.code, size: 16),
+            label: const Text('View All Tutorials'),
             onPressed: () {
               Navigator.pop(ctx);
               Navigator.push(
@@ -746,7 +900,7 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
                 MaterialPageRoute(
                   builder: (_) => ApiTutorialScreen(
                     channel: widget.channel,
-                    initialTabIndex: 3,
+                    initialTabIndex: key.scope == 'write' ? 1 : 2,
                   ),
                 ),
               );
@@ -754,7 +908,7 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('I Have Saved Them'),
+            child: const Text('Close'),
           ),
         ],
       ),
@@ -1178,10 +1332,52 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
   }
 
   Widget _buildDevicesTab(ChannelProvider provider) {
+    final config = AppConfig();
+
     return Scaffold(
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // Connection Info Banner
+          Card(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: Colors.amber.withValues(alpha: 0.3)),
+            ),
+            color: Colors.amber.withValues(alpha: 0.05),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.hub, size: 18, color: Colors.amberAccent),
+                      SizedBox(width: 8),
+                      Text('MQTT Broker Connection Info', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(child: _CopyableBadge(label: 'Host', value: config.mqttHost)),
+                      const SizedBox(width: 8),
+                      Expanded(child: _CopyableBadge(label: 'Port', value: '${config.mqttPort} (MQTTS 8883 / MQTT 1883)')),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(child: _CopyableBadge(label: 'Pub Topic', value: 'channels/${widget.channel.id}/data')),
+                      const SizedBox(width: 8),
+                      Expanded(child: _CopyableBadge(label: 'Sub Topic', value: 'channels/${widget.channel.id}/commands')),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
           Card(
             color: Colors.teal.withValues(alpha: 0.1),
             shape: RoundedRectangleBorder(
@@ -1190,7 +1386,7 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
             ),
             child: ListTile(
               leading: const Icon(Icons.school, color: Colors.tealAccent),
-              title: const Text('MQTT Device Tutorials', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              title: const Text('MQTT Device Tutorials & Code', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
               subtitle: const Text('View ESP32 (Arduino / MicroPython) and Python MQTT streaming code examples.', style: TextStyle(fontSize: 12)),
               trailing: const Icon(Icons.arrow_forward_ios, size: 14),
               onTap: () {
@@ -1226,83 +1422,36 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
               ),
             )
           else
-            ...provider.devices.map((dev) {
-              Color scopeColor;
-              String scopeLabel;
-              if (dev.scope == 'pubsub') {
-                scopeColor = Colors.purpleAccent;
-                scopeLabel = 'PUB & SUB';
-              } else if (dev.scope == 'subscribe') {
-                scopeColor = Colors.blueAccent;
-                scopeLabel = 'SUB ONLY';
-              } else {
-                scopeColor = Colors.greenAccent;
-                scopeLabel = 'PUB ONLY';
-              }
-
-              return Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        backgroundColor: dev.isActive ? Colors.cyan.withValues(alpha: 0.15) : Colors.grey.withValues(alpha: 0.15),
-                        child: Icon(Icons.memory, color: dev.isActive ? Colors.cyanAccent : Colors.grey),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(dev.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: scopeColor.withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(4),
-                                    border: Border.all(color: scopeColor.withValues(alpha: 0.5)),
-                                  ),
-                                  child: Text(
-                                    scopeLabel,
-                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: scopeColor),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text('MQTT User: ${dev.mqttUsername}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                          ],
-                        ),
-                      ),
-                      Switch(
-                        value: dev.isActive,
-                        activeThumbColor: Colors.greenAccent,
-                        onChanged: (val) async {
-                          await provider.apiService.updateDevice(widget.channel.id, dev.id, isActive: val);
-                          await provider.loadDevices(widget.channel.id);
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.edit_outlined, size: 20),
-                        tooltip: 'Edit Access Control',
-                        onPressed: () => _showEditDeviceDialog(dev),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
-                        onPressed: () async {
-                          await provider.apiService.deleteDevice(widget.channel.id, dev.id);
-                          await provider.loadDevices(widget.channel.id);
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }),
+            ...provider.devices.map((dev) => _DeviceItemCard(
+                  key: ValueKey(dev.id),
+                  device: dev,
+                  channelId: widget.channel.id,
+                  onEdit: () => _showEditDeviceDialog(dev),
+                  onViewCredentials: () => _showCredentialsDialog(dev),
+                  onToggleActive: (val) async {
+                    await provider.apiService.updateDevice(widget.channel.id, dev.id, isActive: val);
+                    await provider.loadDevices(widget.channel.id);
+                  },
+                  onDelete: () async {
+                    await provider.apiService.deleteDevice(widget.channel.id, dev.id);
+                    await provider.loadDevices(widget.channel.id);
+                  },
+                  onResetPassword: () async {
+                    try {
+                      final updated = await provider.apiService.resetDevicePassword(widget.channel.id, dev.id);
+                      await provider.loadDevices(widget.channel.id);
+                      if (mounted) {
+                        _showCredentialsDialog(updated);
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed to reset password: $e')),
+                        );
+                      }
+                    }
+                  },
+                )),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -1314,10 +1463,52 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
   }
 
   Widget _buildApiKeysTab(ChannelProvider provider) {
+    final config = AppConfig();
+
     return Scaffold(
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // Connection Info Banner
+          Card(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: Colors.cyan.withValues(alpha: 0.3)),
+            ),
+            color: Colors.cyan.withValues(alpha: 0.05),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.http, size: 20, color: Colors.cyanAccent),
+                      SizedBox(width: 8),
+                      Text('HTTP REST API Connection Info', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(child: _CopyableBadge(label: 'API Base URL', value: config.apiUrl)),
+                      const SizedBox(width: 8),
+                      Expanded(child: _CopyableBadge(label: 'Channel ID', value: widget.channel.id.toString())),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(child: _CopyableBadge(label: 'Auth Header', value: 'X-API-Key: <key>')),
+                      const SizedBox(width: 8),
+                      Expanded(child: _CopyableBadge(label: 'Data Route', value: '/channels/${widget.channel.id}/data')),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
           Card(
             color: Colors.cyan.withValues(alpha: 0.1),
             shape: RoundedRectangleBorder(
@@ -1326,7 +1517,7 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
             ),
             child: ListTile(
               leading: const Icon(Icons.integration_instructions, color: Colors.cyanAccent),
-              title: const Text('HTTP REST API Tutorials', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              title: const Text('HTTP REST API Tutorials & Code', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
               subtitle: const Text('View pre-filled cURL, Python, JavaScript, and ESP32 HTTP POST examples.', style: TextStyle(fontSize: 12)),
               trailing: const Icon(Icons.arrow_forward_ios, size: 14),
               onTap: () {
@@ -1362,23 +1553,14 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
               ),
             )
           else
-            ...provider.apiKeys.map((k) => Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: k.scope == 'write' ? Colors.green.withValues(alpha: 0.15) : Colors.blue.withValues(alpha: 0.15),
-                      child: Icon(k.scope == 'write' ? Icons.upload : Icons.download, color: k.scope == 'write' ? Colors.green : Colors.blue),
-                    ),
-                    title: Text('${k.scope.toUpperCase()} KEY (${k.prefix}***)', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('Created ${DateFormat.yMMMd().format(k.createdAt)}'),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                      onPressed: () async {
-                        await provider.apiService.deleteApiKey(widget.channel.id, k.id);
-                        await provider.loadApiKeys(widget.channel.id);
-                      },
-                    ),
-                  ),
+            ...provider.apiKeys.map((k) => _ApiKeyCardItem(
+                  key: ValueKey(k.id),
+                  apiKeyItem: k,
+                  onViewDetails: () => _showApiKeyDetailsDialog(k),
+                  onDelete: () async {
+                    await provider.apiService.deleteApiKey(widget.channel.id, k.id);
+                    await provider.loadApiKeys(widget.channel.id);
+                  },
                 )),
         ],
       ),
@@ -2034,6 +2216,369 @@ class _CopyableField extends StatelessWidget {
             },
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CopyableBadge extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _CopyableBadge({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () {
+        Clipboard.setData(ClipboardData(text: value));
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Copied $label: $value')),
+          );
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                  const SizedBox(height: 2),
+                  Text(
+                    value,
+                    style: const TextStyle(fontFamily: 'monospace', fontSize: 11, fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.copy, size: 14, color: Colors.grey),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DeviceItemCard extends StatefulWidget {
+  final Device device;
+  final int channelId;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+  final VoidCallback onViewCredentials;
+  final ValueChanged<bool> onToggleActive;
+  final VoidCallback onResetPassword;
+
+  const _DeviceItemCard({
+    super.key,
+    required this.device,
+    required this.channelId,
+    required this.onEdit,
+    required this.onDelete,
+    required this.onViewCredentials,
+    required this.onToggleActive,
+    required this.onResetPassword,
+  });
+
+  @override
+  State<_DeviceItemCard> createState() => _DeviceItemCardState();
+}
+
+class _DeviceItemCardState extends State<_DeviceItemCard> {
+  bool _showPassword = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final dev = widget.device;
+    Color scopeColor;
+    String scopeLabel;
+    if (dev.scope == 'pubsub') {
+      scopeColor = Colors.purpleAccent;
+      scopeLabel = 'PUB & SUB';
+    } else if (dev.scope == 'subscribe') {
+      scopeColor = Colors.blueAccent;
+      scopeLabel = 'SUB ONLY';
+    } else {
+      scopeColor = Colors.greenAccent;
+      scopeLabel = 'PUB ONLY';
+    }
+
+    final hasPassword = dev.mqttPassword != null && dev.mqttPassword!.isNotEmpty;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: dev.isActive ? Colors.cyan.withValues(alpha: 0.15) : Colors.grey.withValues(alpha: 0.15),
+                  child: Icon(Icons.memory, color: dev.isActive ? Colors.cyanAccent : Colors.grey),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          dev.name,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: scopeColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: scopeColor.withValues(alpha: 0.5)),
+                        ),
+                        child: Text(
+                          scopeLabel,
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: scopeColor),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch(
+                  value: dev.isActive,
+                  activeThumbColor: Colors.greenAccent,
+                  onChanged: widget.onToggleActive,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.vpn_key_outlined, size: 20, color: Colors.amberAccent),
+                  tooltip: 'View Credentials',
+                  onPressed: widget.onViewCredentials,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined, size: 20),
+                  tooltip: 'Edit Access Scope',
+                  onPressed: widget.onEdit,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                  tooltip: 'Delete Device',
+                  onPressed: widget.onDelete,
+                ),
+              ],
+            ),
+            const Divider(height: 16),
+            // Username and Password Row
+            Row(
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      const Text('User: ', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      Flexible(
+                        child: Text(
+                          dev.mqttUsername,
+                          style: const TextStyle(fontFamily: 'monospace', fontSize: 12, fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () {
+                          Clipboard.setData(ClipboardData(text: dev.mqttUsername));
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Copied MQTT Username')),
+                            );
+                          }
+                        },
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 4),
+                          child: Icon(Icons.copy, size: 14, color: Colors.grey),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Row(
+                    children: [
+                      const Text('Pass: ', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      if (hasPassword) ...[
+                        Flexible(
+                          child: Text(
+                            _showPassword ? dev.mqttPassword! : '••••••••••••',
+                            style: const TextStyle(fontFamily: 'monospace', fontSize: 12, fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        InkWell(
+                          onTap: () => setState(() => _showPassword = !_showPassword),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: Icon(_showPassword ? Icons.visibility_off : Icons.visibility, size: 16, color: Colors.grey),
+                          ),
+                        ),
+                        InkWell(
+                          onTap: () {
+                            Clipboard.setData(ClipboardData(text: dev.mqttPassword!));
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Copied MQTT Password')),
+                              );
+                            }
+                          },
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 4),
+                            child: Icon(Icons.copy, size: 14, color: Colors.grey),
+                          ),
+                        ),
+                      ] else ...[
+                        const Flexible(
+                          child: Text(
+                            'Not saved',
+                            style: TextStyle(fontSize: 11, color: Colors.grey, fontStyle: FontStyle.italic),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        InkWell(
+                          onTap: widget.onResetPassword,
+                          child: const Text(
+                            'Reset',
+                            style: TextStyle(fontSize: 11, color: Colors.amberAccent, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ApiKeyCardItem extends StatefulWidget {
+  final ApiKeyItem apiKeyItem;
+  final VoidCallback onViewDetails;
+  final VoidCallback onDelete;
+
+  const _ApiKeyCardItem({
+    super.key,
+    required this.apiKeyItem,
+    required this.onViewDetails,
+    required this.onDelete,
+  });
+
+  @override
+  State<_ApiKeyCardItem> createState() => _ApiKeyCardItemState();
+}
+
+class _ApiKeyCardItemState extends State<_ApiKeyCardItem> {
+  bool _showKey = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = widget.apiKeyItem;
+    final hasFullKey = k.apiKey != null && k.apiKey!.isNotEmpty;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: k.scope == 'write' ? Colors.green.withValues(alpha: 0.15) : Colors.blue.withValues(alpha: 0.15),
+                  child: Icon(k.scope == 'write' ? Icons.upload : Icons.download, color: k.scope == 'write' ? Colors.green : Colors.blue),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('${k.scope.toUpperCase()} API KEY', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      const SizedBox(height: 2),
+                      Text('Created ${DateFormat.yMMMd().format(k.createdAt)}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.info_outline, size: 20, color: Colors.cyanAccent),
+                  tooltip: 'View API Details & Snippets',
+                  onPressed: widget.onViewDetails,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                  tooltip: 'Revoke Key',
+                  onPressed: widget.onDelete,
+                ),
+              ],
+            ),
+            const Divider(height: 16),
+            Row(
+              children: [
+                const Text('Key: ', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                if (hasFullKey) ...[
+                  Flexible(
+                    child: Text(
+                      _showKey ? k.apiKey! : ('•' * 28),
+                      style: const TextStyle(fontFamily: 'monospace', fontSize: 12, fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () => setState(() => _showKey = !_showKey),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      child: Icon(_showKey ? Icons.visibility_off : Icons.visibility, size: 16, color: Colors.grey),
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(text: k.apiKey!));
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Copied API Key to clipboard')),
+                        );
+                      }
+                    },
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 4),
+                      child: Icon(Icons.copy, size: 14, color: Colors.grey),
+                    ),
+                  ),
+                ] else ...[
+                  Flexible(
+                    child: Text(
+                      '${k.prefix}*** (Legacy key)',
+                      style: const TextStyle(fontFamily: 'monospace', fontSize: 12, color: Colors.grey),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

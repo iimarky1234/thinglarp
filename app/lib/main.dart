@@ -38,7 +38,7 @@ class ThingLarpApp extends StatelessWidget {
     final auth = context.watch<AuthProvider>();
 
     return MaterialApp(
-      title: 'ThingLarp IoT',
+      title: 'ThingLarp',
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.dark,
       theme: ThemeData(

@@ -198,47 +198,41 @@ Authorization: Bearer <jwt_access_token>
 }
 ```
 *`scope` accepts `publish`, `subscribe`, or `pubsub`. Setting `is_active: false` immediately denies MQTT authentication.*
-  "scope": "publish" // "publish", "subscribe", or "pubsub"
-}
-```
-**Response (201 Created):**
-```json
-{
-  "id": 1,
-  "channel_id": 1,
-  "name": "ESP32_Outdoor_Unit",
-  "mqtt_username": "d_0a1b2c3d4e",
-  "mqtt_password": "raw_generated_password_revealed_once",
-  "scope": "publish",
-  "is_active": true,
-  "created_at": "2026-11-12T00:00:00Z"
-}
-```
 
----
-
-### Update Device Access Control
-```http
-PATCH /channels/{channel_id}/devices/{device_id}
-```
-**Request Body:**
-```json
-{
-  "name": "ESP32_Updated_Name",
-  "scope": "pubsub", // "publish", "subscribe", or "pubsub"
-  "is_active": true
-}
-```
 **Response (200 OK):**
 ```json
 {
   "id": 1,
   "channel_id": 1,
-  "name": "ESP32_Updated_Name",
-  "mqtt_username": "d_0a1b2c3d4e",
+  "name": "ESP32_Outdoor_Unit_Renamed",
+  "mqtt_username": "dev_ch1_1",
+  "mqtt_password": "<password>",
   "scope": "pubsub",
   "is_active": true,
-  "created_at": "2026-11-12T00:00:00Z"
+  "created_at": "2026-11-12T04:38:34Z"
+}
+```
+
+---
+
+### Reset Device Password
+```http
+POST /channels/{channel_id}/devices/{device_id}/reset-password
+Authorization: Bearer <jwt_access_token>
+```
+Regenerates and updates the MQTT password for the specified device, returning the updated credentials. Previous credentials are immediately invalidated.
+
+**Response (200 OK):**
+```json
+{
+  "id": 1,
+  "channel_id": 1,
+  "name": "ESP32_Outdoor_Unit",
+  "mqtt_username": "dev_ch1_1",
+  "mqtt_password": "<newly_generated_password>",
+  "scope": "pubsub",
+  "is_active": true,
+  "created_at": "2026-11-12T04:38:34Z"
 }
 ```
 

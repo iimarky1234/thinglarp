@@ -21,7 +21,7 @@ async def list_api_keys(
     await verify_channel_ownership(channel_id, current_user.id, db)
     rows = await db.fetch(
         """
-        SELECT id, channel_id, prefix, scope, created_at, last_used_at
+        SELECT id, channel_id, prefix, api_key, scope, created_at, last_used_at
         FROM app.api_keys
         WHERE channel_id = $1 AND revoked_at IS NULL
         ORDER BY created_at DESC;
@@ -45,12 +45,13 @@ async def create_api_key(
 
     row = await db.fetchrow(
         """
-        INSERT INTO app.api_keys (channel_id, prefix, key_hash, scope)
-        VALUES ($1, $2, $3, $4)
-        RETURNING id, channel_id, prefix, scope, created_at;
+        INSERT INTO app.api_keys (channel_id, prefix, api_key, key_hash, scope)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id, channel_id, prefix, api_key, scope, created_at;
         """,
         channel_id,
         prefix,
+        raw_key,
         key_hash,
         payload.scope,
     )
@@ -59,7 +60,7 @@ async def create_api_key(
         id=row["id"],
         channel_id=row["channel_id"],
         prefix=row["prefix"],
-        api_key=raw_key,
+        api_key=row["api_key"],
         scope=row["scope"],
         created_at=row["created_at"],
     )

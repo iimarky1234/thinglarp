@@ -190,6 +190,18 @@ class ApiService {
     throw Exception(err);
   }
 
+  Future<Device> resetDevicePassword(int channelId, int deviceId) async {
+    final res = await http.post(
+      Uri.parse('${config.apiUrl}/channels/$channelId/devices/$deviceId/reset-password'),
+      headers: _headers,
+    );
+    if (res.statusCode == 200) {
+      return Device.fromJson(jsonDecode(res.body));
+    }
+    final err = jsonDecode(res.body)['detail'] ?? 'Failed to reset device password';
+    throw Exception(err);
+  }
+
   Future<void> deleteDevice(int channelId, int deviceId) async {
     final res = await http.delete(
       Uri.parse('${config.apiUrl}/channels/$channelId/devices/$deviceId'),

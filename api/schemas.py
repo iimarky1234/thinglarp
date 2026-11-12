@@ -149,6 +149,7 @@ class DeviceOut(BaseModel):
     channel_id: int
     name: str
     mqtt_username: str
+    mqtt_password: str | None = None
     scope: str
     is_active: bool
     created_at: datetime
@@ -171,6 +172,7 @@ class ApiKeyOut(BaseModel):
     id: int
     channel_id: int
     prefix: str
+    api_key: str | None = None
     scope: str
     created_at: datetime
     last_used_at: datetime | None

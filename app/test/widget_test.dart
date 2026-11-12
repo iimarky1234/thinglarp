@@ -31,7 +31,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify LoginScreen is shown with title and input fields
-    expect(find.text('ThingLarp IoT'), findsOneWidget);
+    expect(find.text('ThingLarp'), findsOneWidget);
     expect(find.widgetWithText(ElevatedButton, 'Login'), findsOneWidget);
     expect(find.byType(TextFormField), findsNWidgets(2));
   });

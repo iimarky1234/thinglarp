@@ -50,7 +50,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ThingLarp IoT'),
+        title: const Text('ThingLarp'),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
