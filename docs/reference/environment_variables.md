@@ -29,6 +29,8 @@ All platform settings are configured via the `.env` file at the root of the proj
 | **`JWT_ALGORITHM`** | `HS256` | Algorithm used for JWT signatures. |
 | **`ACCESS_TOKEN_EXPIRE_MINUTES`** | `15` | Expiry duration for user access tokens. |
 | **`REFRESH_TOKEN_EXPIRE_DAYS`** | `30` | Expiry duration for persistent refresh tokens. |
+| **`INITIAL_ADMIN_USERNAME`** | *(Optional)* | Username for the platform administrator (e.g. `admin`). Automatically created or promoted to `is_admin=true` on startup. |
+| **`INITIAL_ADMIN_PASSWORD`** | *(Optional)* | Password for the initial administrator account. Automatically hashed using Argon2id and synchronized. |
 
 ---
 

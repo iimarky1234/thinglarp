@@ -1470,6 +1470,16 @@ For a detailed guide on how to configure each section, generate secure secrets, 
 <td style="text-align: left;"><code>30</code></td>
 <td style="text-align: left;">Expiry duration for persistent refresh tokens.</td>
 </tr>
+<tr>
+<td style="text-align: left;"><strong><code>INITIAL_ADMIN_USERNAME</code></strong></td>
+<td style="text-align: left;"><em>(Optional)</em></td>
+<td style="text-align: left;">Username for the platform administrator (e.g. <code>admin</code>). Automatically created or promoted to <code>is_admin=true</code> on startup.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>INITIAL_ADMIN_PASSWORD</code></strong></td>
+<td style="text-align: left;"><em>(Optional)</em></td>
+<td style="text-align: left;">Password for the initial administrator account. Automatically hashed using Argon2id and synchronized.</td>
+</tr>
 </tbody>
 </table>
 <hr />

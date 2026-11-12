@@ -126,6 +126,21 @@ REFRESH_TOKEN_EXPIRE_DAYS=30
 
 ---
 
+### Section 6: Initial Administrator Account
+
+Configure an initial administrator account to bootstrap platform management without manual SQL commands:
+
+```ini
+# Initial Platform Administrator
+INITIAL_ADMIN_USERNAME=admin
+INITIAL_ADMIN_PASSWORD=AdminPassword123!
+```
+
+- **`INITIAL_ADMIN_USERNAME`**: The username for the administrator account. If the user does not exist, the API automatically provisions it with `is_admin = true`. If the user already exists, the API ensures `is_admin = true`.
+- **`INITIAL_ADMIN_PASSWORD`**: The administrator password, automatically hashed with Argon2id. If updated in `.env`, the API synchronizes the password upon container restart.
+
+---
+
 ## 3. Generating Secure Production Secrets
 
 For production environments, you can generate cryptographically secure random values using `openssl` or `python`:

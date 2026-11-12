@@ -27,4 +27,8 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "30"))
     mqtt_session_expire_hours: int = int(os.getenv("MQTT_SESSION_EXPIRE_HOURS", "24"))
 
+    # Initial Admin Bootstrap Settings
+    initial_admin_username: str | None = os.getenv("INITIAL_ADMIN_USERNAME") or os.getenv("ADMIN_USERNAME")
+    initial_admin_password: str | None = os.getenv("INITIAL_ADMIN_PASSWORD") or os.getenv("ADMIN_PASSWORD")
+
 settings = Settings()

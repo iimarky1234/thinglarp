@@ -1153,6 +1153,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#section-6-initial-administrator-account" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Section 6: Initial Administrator Account
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1518,6 +1529,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#section-6-initial-administrator-account" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Section 6: Initial Administrator Account
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1659,16 +1681,27 @@
 <li><strong><code>REFRESH_TOKEN_EXPIRE_DAYS</code></strong>: Lifespan of persistent refresh tokens (default: 30 days).</li>
 </ul>
 <hr />
+<h3 id="section-6-initial-administrator-account">Section 6: Initial Administrator Account<a class="headerlink" href="#section-6-initial-administrator-account" title="Permanent link">&para;</a></h3>
+<p>Configure an initial administrator account to bootstrap platform management without manual SQL commands:</p>
+<div class="language-ini highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Initial Platform Administrator</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="na">INITIAL_ADMIN_USERNAME</span><span class="o">=</span><span class="s">admin</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="na">INITIAL_ADMIN_PASSWORD</span><span class="o">=</span><span class="s">AdminPassword123!</span>
+</span></code></pre></div>
+<ul>
+<li><strong><code>INITIAL_ADMIN_USERNAME</code></strong>: The username for the administrator account. If the user does not exist, the API automatically provisions it with <code>is_admin = true</code>. If the user already exists, the API ensures <code>is_admin = true</code>.</li>
+<li><strong><code>INITIAL_ADMIN_PASSWORD</code></strong>: The administrator password, automatically hashed with Argon2id. If updated in <code>.env</code>, the API synchronizes the password upon container restart.</li>
+</ul>
+<hr />
 <h2 id="3-generating-secure-production-secrets">3. Generating Secure Production Secrets<a class="headerlink" href="#3-generating-secure-production-secrets" title="Permanent link">&para;</a></h2>
 <p>For production environments, you can generate cryptographically secure random values using <code>openssl</code> or <code>python</code>:</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Generate JWT Secret (64 hex characters)</label><label for="__tabbed_1_2">Generate Strong Passwords</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>openssl<span class="w"> </span>rand<span class="w"> </span>-hex<span class="w"> </span><span class="m">32</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>openssl<span class="w"> </span>rand<span class="w"> </span>-hex<span class="w"> </span><span class="m">32</span>
 </span></code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>openssl<span class="w"> </span>rand<span class="w"> </span>-base64<span class="w"> </span><span class="m">24</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>openssl<span class="w"> </span>rand<span class="w"> </span>-base64<span class="w"> </span><span class="m">24</span>
 </span></code></pre></div>
 </div>
 </div>
@@ -1676,12 +1709,12 @@
 <hr />
 <h2 id="4-applying-changes-to-running-containers">4. Applying Changes to Running Containers<a class="headerlink" href="#4-applying-changes-to-running-containers" title="Permanent link">&para;</a></h2>
 <p>When you modify <code>.env</code>, restart the Docker Compose stack to apply the new environment variables:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Restart services to pick up new environment variables</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># If database passwords or service credentials were changed from scratch:</span>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>docker<span class="w"> </span>compose<span class="w"> </span>down<span class="w"> </span>-v
-</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>--build
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Restart services to pick up new environment variables</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c1"># If database passwords or service credentials were changed from scratch:</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>docker<span class="w"> </span>compose<span class="w"> </span>down<span class="w"> </span>-v
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>--build
 </span></code></pre></div>
 <blockquote>
 <p>[!CAUTION]
