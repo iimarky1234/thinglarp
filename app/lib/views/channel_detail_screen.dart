@@ -1268,32 +1268,48 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
-                  _StatusIndicator(state: mqttState),
+                  _StatusIndicator(
+                    state: mqttState,
+                    isPolling: widget.isReadOnly && !provider.apiService.isAuthenticated,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      mqttState == BrokerState.connected
-                          ? 'Streaming Live Data (QoS 1)'
-                          : mqttState == BrokerState.connecting
-                              ? 'Connecting to Broker...'
-                              : 'Offline / Historical View',
+                      widget.isReadOnly && !provider.apiService.isAuthenticated
+                          ? 'Live Telemetry (Auto-Refresh 10s)'
+                          : mqttState == BrokerState.connected
+                              ? 'Streaming Live Data (QoS 1)'
+                              : mqttState == BrokerState.connecting
+                                  ? 'Connecting to Broker...'
+                                  : 'Offline / Historical View',
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                     ),
                   ),
-                  IconButton(
-                    icon: Icon(
-                      provider.isLiveStreaming ? Icons.pause_circle_filled : Icons.play_circle_fill,
-                      color: provider.isLiveStreaming ? Colors.orange : Colors.green,
+                  if (widget.isReadOnly && !provider.apiService.isAuthenticated)
+                    IconButton(
+                      icon: const Icon(Icons.refresh, color: Colors.tealAccent),
+                      tooltip: 'Refresh Telemetry',
+                      onPressed: () {
+                        provider.loadFields(widget.channel.id);
+                        provider.loadHistoricalData(widget.channel.id, resolution: provider.currentResolution);
+                        provider.loadLatestSnapshot(widget.channel.id);
+                      },
+                    )
+                  else
+                    IconButton(
+                      icon: Icon(
+                        provider.isLiveStreaming ? Icons.pause_circle_filled : Icons.play_circle_fill,
+                        color: provider.isLiveStreaming ? Colors.orange : Colors.green,
+                      ),
+                      tooltip: provider.isLiveStreaming ? 'Pause Stream' : 'Resume Stream',
+                      onPressed: () {
+                        if (provider.isLiveStreaming) {
+                          provider.stopLiveStream();
+                        } else {
+                          provider.startLiveStream();
+                        }
+                      },
                     ),
-                    tooltip: provider.isLiveStreaming ? 'Pause Stream' : 'Resume Stream',
-                    onPressed: () {
-                      if (provider.isLiveStreaming) {
-                        provider.stopLiveStream();
-                      } else {
-                        provider.startLiveStream();
-                      }
-                    },
-                  ),
                 ],
               ),
             ),
@@ -1723,21 +1739,30 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
 // -----------------------------------------------------------------------------
 class _StatusIndicator extends StatelessWidget {
   final BrokerState state;
+  final bool isPolling;
 
-  const _StatusIndicator({required this.state});
+  const _StatusIndicator({required this.state, this.isPolling = false});
 
   @override
   Widget build(BuildContext context) {
-    final color = state == BrokerState.connected
-        ? Colors.green
-        : state == BrokerState.connecting
-            ? Colors.orange
-            : Colors.grey;
+    final color = isPolling
+        ? Colors.tealAccent
+        : state == BrokerState.connected
+            ? Colors.green
+            : state == BrokerState.connecting
+                ? Colors.orange
+                : Colors.grey;
 
     return Container(
       width: 12,
       height: 12,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+        boxShadow: isPolling || state == BrokerState.connected
+            ? [BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 6, spreadRadius: 1)]
+            : null,
+      ),
     );
   }
 }

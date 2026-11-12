@@ -1,14 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:mqtt_client/mqtt_client.dart';
-import 'package:mqtt_client/mqtt_server_client.dart';
+import 'mqtt_connection.dart';
 
 enum BrokerState { disconnected, connecting, connected, error }
 
 class MqttService {
-  MqttServerClient? _client;
+  MqttClient? _client;
   final _stateController = StreamController<BrokerState>.broadcast();
   final _dataController = StreamController<Map<String, dynamic>>.broadcast();
 
@@ -27,16 +26,12 @@ class MqttService {
     _updateState(BrokerState.connecting);
 
     final clientId = 'flutter_${username}_${DateTime.now().millisecondsSinceEpoch % 10000}';
-    _client = MqttServerClient.withPort(host, clientId, port);
-
-    _client!.secure = useTls;
-    _client!.keepAlivePeriod = 30;
-    _client!.autoReconnect = true;
-    _client!.logging(on: false);
-
-    if (useTls) {
-      _client!.securityContext = SecurityContext.defaultContext;
-    }
+    _client = getPlatformMqttClient(
+      host: host,
+      port: port,
+      clientId: clientId,
+      useTls: useTls,
+    );
 
     final connMessage = MqttConnectMessage()
         .authenticateAs(username, password)
@@ -47,7 +42,13 @@ class MqttService {
     _client!.connectionMessage = connMessage;
 
     try {
-      final status = await _client!.connect();
+      final status = await _client!.connect().timeout(
+        const Duration(seconds: 8),
+        onTimeout: () {
+          debugPrint('MQTT connection timeout (8s)');
+          return null;
+        },
+      );
       if (status?.state == MqttConnectionState.connected ||
           _client!.connectionStatus?.state == MqttConnectionState.connected) {
         _updateState(BrokerState.connected);

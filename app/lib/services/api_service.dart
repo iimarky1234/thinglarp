@@ -8,6 +8,7 @@ import '../models/user.dart';
 class ApiService {
   final AppConfig config = AppConfig();
   String? accessToken;
+  bool get isAuthenticated => accessToken != null;
 
   Map<String, String> get _headers => {
         'Content-Type': 'application/json',

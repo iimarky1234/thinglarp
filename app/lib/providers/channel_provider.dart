@@ -91,9 +91,11 @@ class ChannelProvider extends ChangeNotifier {
         loadHistoricalData(channel.id),
         loadLatestSnapshot(channel.id),
       ]);
-      try {
-        await startLiveStream();
-      } catch (_) {}
+      if (apiService.isAuthenticated) {
+        try {
+          await startLiveStream();
+        } catch (_) {}
+      }
     } else {
       // Load channel metadata & history
       await Future.wait([
@@ -177,13 +179,14 @@ class ChannelProvider extends ChangeNotifier {
       final password = session['password'] as String;
 
       final config = AppConfig();
+      final useTls = config.mqttPort == 8883 || (kIsWeb && config.mqttHost.contains('iimarky123.io.vn'));
       await mqttService.connect(
         host: config.mqttHost,
         port: config.mqttPort,
         username: username,
         password: password,
         channelId: activeChannel!.id,
-        useTls: config.mqttPort == 8883,
+        useTls: useTls,
       );
     } catch (e) {
       debugPrint('Failed to start live stream: $e');
