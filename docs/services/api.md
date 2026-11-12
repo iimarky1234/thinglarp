@@ -27,6 +27,7 @@ The **API Gateway** (`api/`) is a high-performance **FastAPI** service responsib
 | **`keys`** | `/channels/{id}/keys` | Write / Read API key generation and revocation. |
 | **`mqtt`** | `/mqtt` | Short-lived (24h) MQTT session generation for frontend clients (`POST /mqtt/session`). |
 | **`data`** | `/channels/{id}/data` | Telemetry query with auto-downsampling and HTTP ingestion (`POST`). |
+| **`admin`** | `/admin` | Administrative user management, privilege modification, and platform metrics (`is_admin = true`). |
 
 ---
 

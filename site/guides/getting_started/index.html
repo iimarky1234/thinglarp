@@ -1509,7 +1509,7 @@ For a complete parameter breakdown, secret generation commands, and production s
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>curl<span class="w"> </span>-H<span class="w"> </span><span class="s2">"Host: </span><span class="si">${</span><span class="nv">API_DOMAIN</span><span class="k">:-</span><span class="nv">api</span><span class="p">.example.com</span><span class="si">}</span><span class="s2">"</span><span class="w"> </span>http://localhost/health
 </span></code></pre></div>
 <p>Expected response:
-<div class="language-json highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">{</span><span class="nt">"status"</span><span class="p">:</span><span class="s2">"healthy"</span><span class="p">,</span><span class="nt">"database"</span><span class="p">:</span><span class="s2">"connected"</span><span class="p">,</span><span class="nt">"time"</span><span class="p">:</span><span class="s2">"2026-11-12T05:40:00Z"</span><span class="p">}</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">{</span><span class="nt">"status"</span><span class="p">:</span><span class="s2">"ok"</span><span class="p">,</span><span class="nt">"database"</span><span class="p">:</span><span class="s2">"connected"</span><span class="p">,</span><span class="nt">"mqtt_publisher"</span><span class="p">:</span><span class="s2">"connected"</span><span class="p">}</span>
 </span></code></pre></div></p>
 <hr />
 <h2 id="4-run-the-end-to-end-simulation">4. Run the End-to-End Simulation<a class="headerlink" href="#4-run-the-end-to-end-simulation" title="Permanent link">&para;</a></h2>
@@ -1526,7 +1526,7 @@ For a complete parameter breakdown, secret generation commands, and production s
 <p>Log in with the pre-provisioned administrator credentials:
 - <strong>Username:</strong> <code>admin</code>
 - <strong>Password:</strong> <code>admin123456</code></p>
-<p>Or register a new account directly from the login screen!</p>
+<p><em>(When logged in as an administrator, click the shield / admin icon in the top AppBar to access the <strong>Admin User Management</strong> console to manage accounts, reset passwords, or review platform statistics).</em></p>
 
 
 

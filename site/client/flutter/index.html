@@ -951,6 +951,34 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#admin-user-management-console" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Admin User Management Console
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Admin User Management Console">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#capabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Capabilities:
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1461,6 +1489,34 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#admin-user-management-console" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Admin User Management Console
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Admin User Management Console">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#capabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Capabilities:
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1492,6 +1548,7 @@
 <li><strong>Real-Time MQTT Streaming:</strong> Direct subscription to live channel topics (<code>channels/{id}/data</code>) using ephemeral session tokens.</li>
 <li><strong>Resolution Selector:</strong> Toggle between <strong>Auto</strong>, <strong>Raw</strong>, <strong>1-Minute</strong>, and <strong>1-Hour</strong> historical aggregations.</li>
 <li><strong>Hardware &amp; Key Management:</strong> Provision new device credentials and issue HTTP Read/Write API keys with one click.</li>
+<li><strong>Admin User Management Console:</strong> Platform administrators can search users, toggle account status, promote/demote admins, reset passwords, and inspect cluster metrics.</li>
 </ul>
 <hr />
 <h2 id="application-structure">Application Structure<a class="headerlink" href="#application-structure" title="Permanent link">&para;</a></h2>
@@ -1511,8 +1568,9 @@
 </span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>│   ├── settings_screen.dart        # Host / Port / API endpoint configuration
 </span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>│   ├── login_screen.dart           # Sign In &amp; Registration forms
 </span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>│   ├── channels_screen.dart        # Channel list cards &amp; channel creation modal
-</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>│   └── channel_detail_screen.dart  # Channel dashboard: Charts, Messages, Devices, Keys
-</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>└── main.dart                       # App initialization with Dark/Light theme
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>│   ├── channel_detail_screen.dart  # Channel dashboard: Charts, Messages, Devices, Keys
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>│   └── admin_users_screen.dart     # Admin dashboard: Metrics, user moderation, credentials
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>└── main.dart                       # App initialization with Dark/Light theme
 </span></code></pre></div>
 <hr />
 <h2 id="building-and-running">Building and Running<a class="headerlink" href="#building-and-running" title="Permanent link">&para;</a></h2>
@@ -1558,6 +1616,19 @@
     ApiService --&gt;|"REST Response"| Provider
     MqttService --&gt;|"Live Packet"| Provider
     Provider --&gt;|"notifyListeners()"| UIWidgets["ChannelDetailScreen / Charts"]</code></pre>
+<hr />
+<h2 id="admin-user-management-console">Admin User Management Console<a class="headerlink" href="#admin-user-management-console" title="Permanent link">&para;</a></h2>
+<p>When authenticated with an administrator account (<code>is_admin: true</code>), an <strong>Admin Panel</strong> icon button appears in the main channels AppBar.</p>
+<h3 id="capabilities">Capabilities:<a class="headerlink" href="#capabilities" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>System Metrics:</strong> Live overview of platform totals (Registered Users, Active Accounts, Platform Administrators).</li>
+<li><strong>Search &amp; Filter:</strong> Instant real-time username and email filtering.</li>
+<li><strong>Account Moderation:</strong></li>
+<li>One-click toggle between <strong>Active</strong> and <strong>Suspended</strong> states.</li>
+<li>Role promotion or demotion (<strong>Admin</strong> badge).</li>
+<li>Administrative <strong>Password Reset</strong> dialog without requiring the old password.</li>
+<li>Safe account deletion with confirmation prompt.</li>
+</ul>
 
 
 

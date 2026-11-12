@@ -74,7 +74,7 @@ curl -H "Host: ${API_DOMAIN:-api.example.com}" http://localhost/health
 
 Expected response:
 ```json
-{"status":"healthy","database":"connected","time":"2026-11-12T05:40:00Z"}
+{"status":"ok","database":"connected","mqtt_publisher":"connected"}
 ```
 
 ---
@@ -104,4 +104,4 @@ Log in with the pre-provisioned administrator credentials:
 - **Username:** `admin`
 - **Password:** `admin123456`
 
-Or register a new account directly from the login screen!
+*(When logged in as an administrator, click the shield / admin icon in the top AppBar to access the **Admin User Management** console to manage accounts, reset passwords, or review platform statistics).*

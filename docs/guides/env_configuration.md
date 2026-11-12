@@ -68,7 +68,7 @@ POSTGRES_PASSWORD=postgres_supersecret_change_me
 ThingLarp enforces strict least-privilege security. Each service connects to PostgreSQL using a dedicated database role with restricted table permissions:
 
 ```ini
-# Service Database Passwords (must match passwords in db/init/03_roles.sql)
+# Service Database Passwords (automatically synced to db/init/03_roles.sh)
 PG_MQTT_AUTH_PASSWORD=iot_mqtt_auth_secret
 PG_BRIDGE_PASSWORD=iot_bridge_secret
 PG_API_PASSWORD=iot_api_secret
@@ -78,8 +78,8 @@ PG_API_PASSWORD=iot_api_secret
 - **`PG_BRIDGE_PASSWORD`**: Password for the `iot_bridge` user, used by the Python Ingestion Bridge to bulk `COPY` telemetry into TimescaleDB.
 - **`PG_API_PASSWORD`**: Password for the `iot_api` user, used by the FastAPI Gateway for user registration, channel management, and telemetry queries.
 
-> [!WARNING]
-> The passwords defined here must match the passwords set during database initialization in `db/init/03_roles.sql`. If you change these values before the first run, ensure you also update `db/init/03_roles.sql`.
+> [!NOTE]
+> **Fully Automated Synchronization:** Database roles and passwords are automatically generated on first cluster startup via [`db/init/03_roles.sh`](file:///home/iimarky123/Projects/thinglarp-fr/db/init/03_roles.sh). You no longer need to edit static SQL scripts.
 
 ---
 
@@ -99,16 +99,11 @@ API_MQTT_PASSWORD=api_mqtt_secret
 - **`API_MQTT_USER` / `API_MQTT_PASSWORD`**: Credentials used by FastAPI to forward HTTP data writes (`POST /channels/{id}/data`) directly into the broker.
 
 #### How Mosquitto Validates Service Credentials
-The Mosquitto `mosquitto-go-auth` plugin validates MQTT passwords against Bcrypt hashes stored in `db/init/03_roles.sql`.
+The Mosquitto `mosquitto-go-auth` plugin validates MQTT passwords against Bcrypt hashes in PostgreSQL.
 
-If you update `BRIDGE_MQTT_PASSWORD` or `API_MQTT_PASSWORD`, you must generate a corresponding Bcrypt hash:
+During cluster initialization, [`db/init/03_roles.sh`](file:///home/iimarky123/Projects/thinglarp-fr/db/init/03_roles.sh) uses PostgreSQL's native `pgcrypto` extension (`crypt(..., gen_salt('bf', 10))`) to auto-compute Bcrypt hashes directly from `BRIDGE_MQTT_PASSWORD` and `API_MQTT_PASSWORD`. You do not need to generate hashes manually!
 
-```bash
-# Generate a Bcrypt hash using Python
-python3 -c "import bcrypt; print(bcrypt.hashpw(b'YOUR_NEW_PASSWORD', bcrypt.gensalt(10)).decode())"
-```
-
-Then update the `password_hash` entries in `db/init/03_roles.sql` before starting the database.
+Similarly, Mosquitto's Go-Auth plugin dynamically receives `POSTGRES_DB` and `PG_MQTT_AUTH_PASSWORD` from `.env` on container startup via [`mosquitto/docker-entrypoint.sh`](file:///home/iimarky123/Projects/thinglarp-fr/mosquitto/docker-entrypoint.sh) and [`mosquitto/mosquitto.conf.template`](file:///home/iimarky123/Projects/thinglarp-fr/mosquitto/mosquitto.conf.template).
 
 ---
 

@@ -808,22 +808,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#docker-compose-labels" class="md-nav__link">
+  <a href="#docker-compose-labels-routing" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Docker Compose Labels
+        Docker Compose Labels &amp; Routing
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Docker Compose Labels">
+    <nav class="md-nav" aria-label="Docker Compose Labels &amp; Routing">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#fastapi-gateway-registration" class="md-nav__link">
+  <a href="#1-fastapi-gateway-registration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        FastAPI Gateway Registration
+        1. FastAPI Gateway Registration
       
     </span>
   </a>
@@ -831,10 +831,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#mosquitto-mqtts-tcp-tls-registration" class="md-nav__link">
+  <a href="#2-mosquitto-websockets-wss-on-port-443" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Mosquitto MQTTS (TCP TLS) Registration
+        2. Mosquitto WebSockets (WSS on Port 443)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-mosquitto-mqtts-tcp-tls-on-port-8883" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Mosquitto MQTTS (TCP TLS on Port 8883)
       
     </span>
   </a>
@@ -847,10 +858,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#local-development-vs-production" class="md-nav__link">
+  <a href="#complete-isolation-production-standard" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Local Development vs. Production
+        Complete Isolation (Production Standard)
       
     </span>
   </a>
@@ -1402,22 +1413,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#docker-compose-labels" class="md-nav__link">
+  <a href="#docker-compose-labels-routing" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Docker Compose Labels
+        Docker Compose Labels &amp; Routing
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Docker Compose Labels">
+    <nav class="md-nav" aria-label="Docker Compose Labels &amp; Routing">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#fastapi-gateway-registration" class="md-nav__link">
+  <a href="#1-fastapi-gateway-registration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        FastAPI Gateway Registration
+        1. FastAPI Gateway Registration
       
     </span>
   </a>
@@ -1425,10 +1436,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#mosquitto-mqtts-tcp-tls-registration" class="md-nav__link">
+  <a href="#2-mosquitto-websockets-wss-on-port-443" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Mosquitto MQTTS (TCP TLS) Registration
+        2. Mosquitto WebSockets (WSS on Port 443)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-mosquitto-mqtts-tcp-tls-on-port-8883" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Mosquitto MQTTS (TCP TLS on Port 8883)
       
     </span>
   </a>
@@ -1441,10 +1463,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#local-development-vs-production" class="md-nav__link">
+  <a href="#complete-isolation-production-standard" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Local Development vs. Production
+        Complete Isolation (Production Standard)
       
     </span>
   </a>
@@ -1492,52 +1514,68 @@
 </span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">        </span><span class="nt">entryPoint</span><span class="p">:</span>
 </span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">          </span><span class="nt">to</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">websecure</span>
 </span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">          </span><span class="nt">scheme</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span><span class="nt">websecure</span><span class="p">:</span>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">    </span><span class="nt">address</span><span class="p">:</span><span class="w"> </span><span class="s">":443"</span>
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">  </span><span class="nt">mqtts</span><span class="p">:</span>
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">    </span><span class="nt">address</span><span class="p">:</span><span class="w"> </span><span class="s">":8883"</span>
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>
-</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="nt">certificatesResolvers</span><span class="p">:</span>
-</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="w">  </span><span class="nt">letsencrypt</span><span class="p">:</span>
-</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="w">    </span><span class="nt">acme</span><span class="p">:</span>
-</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="w">      </span><span class="nt">email</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${ACME_EMAIL}</span>
-</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="w">      </span><span class="nt">storage</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/etc/traefik/acme/acme.json</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">          </span><span class="nt">permanent</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">  </span><span class="nt">websecure</span><span class="p">:</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">    </span><span class="nt">address</span><span class="p">:</span><span class="w"> </span><span class="s">":443"</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">  </span><span class="nt">mqtts</span><span class="p">:</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">    </span><span class="nt">address</span><span class="p">:</span><span class="w"> </span><span class="s">":8883"</span>
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="nt">certificatesResolvers</span><span class="p">:</span>
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="w">  </span><span class="nt">letsencrypt</span><span class="p">:</span>
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="w">    </span><span class="nt">acme</span><span class="p">:</span>
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="w">      </span><span class="nt">storage</span><span class="p">:</span><span class="w"> </span><span class="s">"/letsencrypt/acme.json"</span>
 </span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a><span class="w">      </span><span class="nt">httpChallenge</span><span class="p">:</span>
-</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="w">        </span><span class="nt">entryPoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">web</span>
+</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="w">        </span><span class="nt">entryPoint</span><span class="p">:</span><span class="w"> </span><span class="s">"web"</span>
 </span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>
 </span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="nt">providers</span><span class="p">:</span>
 </span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="w">  </span><span class="nt">docker</span><span class="p">:</span>
 </span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a><span class="w">    </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="s">"unix:///var/run/docker.sock"</span>
 </span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a><span class="w">    </span><span class="nt">exposedByDefault</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
-</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a><span class="w">    </span><span class="nt">network</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">edge</span>
+</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a><span class="w">    </span><span class="nt">network</span><span class="p">:</span><span class="w"> </span><span class="s">"iot_edge"</span>
 </span></code></pre></div>
+<blockquote>
+<p>[!NOTE]
+Traefik receives the Let's Encrypt account email dynamically via command flag in <code>docker-compose.yml</code>:
+<code>command: ["--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"]</code></p>
+</blockquote>
 <hr />
-<h2 id="docker-compose-labels">Docker Compose Labels<a class="headerlink" href="#docker-compose-labels" title="Permanent link">&para;</a></h2>
+<h2 id="docker-compose-labels-routing">Docker Compose Labels &amp; Routing<a class="headerlink" href="#docker-compose-labels-routing" title="Permanent link">&para;</a></h2>
 <p>Services dynamically register with Traefik using Docker labels in <code>docker-compose.yml</code>:</p>
-<h3 id="fastapi-gateway-registration">FastAPI Gateway Registration<a class="headerlink" href="#fastapi-gateway-registration" title="Permanent link">&para;</a></h3>
+<h3 id="1-fastapi-gateway-registration">1. FastAPI Gateway Registration<a class="headerlink" href="#1-fastapi-gateway-registration" title="Permanent link">&para;</a></h3>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">labels</span><span class="p">:</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"traefik.enable=true"</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"traefik.http.routers.api.rule=Host(`${API_DOMAIN}`)"</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"traefik.http.routers.api.entrypoints=websecure"</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"traefik.http.routers.api.tls.certresolver=letsencrypt"</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"traefik.http.services.api.loadbalancer.server.port=8000"</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"traefik.docker.network=iot_edge"</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"traefik.http.routers.api.rule=Host(`${API_DOMAIN}`)"</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"traefik.http.routers.api.entrypoints=websecure"</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"traefik.http.routers.api.tls.certresolver=letsencrypt"</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"traefik.http.services.api.loadbalancer.server.port=8000"</span>
 </span></code></pre></div>
-<h3 id="mosquitto-mqtts-tcp-tls-registration">Mosquitto MQTTS (TCP TLS) Registration<a class="headerlink" href="#mosquitto-mqtts-tcp-tls-registration" title="Permanent link">&para;</a></h3>
+<h3 id="2-mosquitto-websockets-wss-on-port-443">2. Mosquitto WebSockets (WSS on Port 443)<a class="headerlink" href="#2-mosquitto-websockets-wss-on-port-443" title="Permanent link">&para;</a></h3>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">labels</span><span class="p">:</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"traefik.enable=true"</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"traefik.tcp.routers.mqtt.rule=HostSNI(`${MQTT_DOMAIN}`)"</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"traefik.tcp.routers.mqtt.entrypoints=mqtts"</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"traefik.tcp.routers.mqtt.tls.certresolver=letsencrypt"</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"traefik.tcp.services.mqtt.loadbalancer.server.port=1883"</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"traefik.docker.network=iot_edge"</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"traefik.http.routers.mqtt-ws.rule=Host(`${MQTT_DOMAIN}`)</span><span class="nv"> </span><span class="s">&amp;&amp;</span><span class="nv"> </span><span class="s">PathPrefix(`/mqtt`)"</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"traefik.http.routers.mqtt-ws.entrypoints=websecure"</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"traefik.http.routers.mqtt-ws.tls.certresolver=letsencrypt"</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"traefik.http.services.mqtt-ws.loadbalancer.server.port=9001"</span>
+</span></code></pre></div>
+<h3 id="3-mosquitto-mqtts-tcp-tls-on-port-8883">3. Mosquitto MQTTS (TCP TLS on Port 8883)<a class="headerlink" href="#3-mosquitto-mqtts-tcp-tls-on-port-8883" title="Permanent link">&para;</a></h3>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">labels</span><span class="p">:</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"traefik.enable=true"</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"traefik.docker.network=iot_edge"</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"traefik.tcp.routers.mqtt-tls.rule=HostSNI(`${MQTT_DOMAIN}`)"</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"traefik.tcp.routers.mqtt-tls.entrypoints=mqtts"</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"traefik.tcp.routers.mqtt-tls.tls.certresolver=letsencrypt"</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"traefik.tcp.services.mqtt-tls.loadbalancer.server.port=1883"</span>
 </span></code></pre></div>
 <hr />
-<h2 id="local-development-vs-production">Local Development vs. Production<a class="headerlink" href="#local-development-vs-production" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong>Local / LAN Testing:</strong> In local environments without a public domain name, devices connect directly to port <code>1883</code> (plain MQTT) and port <code>8000</code> (FastAPI HTTP).</li>
-<li><strong>Production Deployment:</strong> In production, Traefik routes all traffic through TLS ports <code>443</code> and <code>8883</code>, ensuring hardware devices and client dashboards are encrypted end-to-end.</li>
-</ul>
+<h2 id="complete-isolation-production-standard">Complete Isolation (Production Standard)<a class="headerlink" href="#complete-isolation-production-standard" title="Permanent link">&para;</a></h2>
+<p>ThingLarp implements complete edge isolation:
+- Raw backend ports <code>1883</code> (Mosquitto), <code>8000</code> (FastAPI), and <code>5432</code> (TimescaleDB) are <strong>never bound to the host</strong>.
+- Traefik is the <strong>exclusive ingress point</strong> handling <code>:80</code> (HTTP redirect), <code>:443</code> (HTTPS &amp; WSS), and <code>:8883</code> (MQTTS).
+- The Traefik dashboard (<code>:8080</code>) is strictly bound to <code>127.0.0.1:8080</code> or private VPN interfaces (e.g. Tailscale), preventing public exposure.</p>
 
 
 

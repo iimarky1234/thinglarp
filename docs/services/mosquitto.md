@@ -20,18 +20,20 @@ The broker exposes three network listeners:
 
 Rather than maintaining static password files (`passwd`) or static ACL text files, `mosquitto-go-auth` queries PostgreSQL in real time.
 
-### Configuration (`mosquitto.conf`)
+### Dynamic Configuration (`mosquitto.conf.template`)
+
+Mosquitto generates its active configuration at container startup using [`mosquitto/docker-entrypoint.sh`](file:///home/iimarky123/Projects/thinglarp-fr/mosquitto/docker-entrypoint.sh) from [`mosquitto/mosquitto.conf.template`](file:///home/iimarky123/Projects/thinglarp-fr/mosquitto/mosquitto.conf.template), interpolating `${POSTGRES_DB}` and `${PG_MQTT_AUTH_PASSWORD}` dynamically from `.env`:
 
 ```ini
 auth_plugin /usr/lib/mosquitto/go-auth.so
 auth_opt_backends postgres
 
-# PostgreSQL Connection
+# Dynamic PostgreSQL Connection (injected from .env)
 auth_opt_pg_host timescaledb
 auth_opt_pg_port 5432
-auth_opt_pg_dbname iot
+auth_opt_pg_dbname ${POSTGRES_DB}
 auth_opt_pg_user iot_mqtt_auth
-auth_opt_pg_password iot_mqtt_auth_secret
+auth_opt_pg_password ${PG_MQTT_AUTH_PASSWORD}
 
 # Password validation uses Bcrypt
 auth_opt_hasher bcrypt

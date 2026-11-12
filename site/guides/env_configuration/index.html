@@ -1584,7 +1584,7 @@
 <hr />
 <h3 id="section-3-service-database-passwords">Section 3: Service Database Passwords<a class="headerlink" href="#section-3-service-database-passwords" title="Permanent link">&para;</a></h3>
 <p>ThingLarp enforces strict least-privilege security. Each service connects to PostgreSQL using a dedicated database role with restricted table permissions:</p>
-<div class="language-ini highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Service Database Passwords (must match passwords in db/init/03_roles.sql)</span>
+<div class="language-ini highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Service Database Passwords (automatically synced to db/init/03_roles.sh)</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="na">PG_MQTT_AUTH_PASSWORD</span><span class="o">=</span><span class="s">iot_mqtt_auth_secret</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="na">PG_BRIDGE_PASSWORD</span><span class="o">=</span><span class="s">iot_bridge_secret</span>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="na">PG_API_PASSWORD</span><span class="o">=</span><span class="s">iot_api_secret</span>
@@ -1595,8 +1595,8 @@
 <li><strong><code>PG_API_PASSWORD</code></strong>: Password for the <code>iot_api</code> user, used by the FastAPI Gateway for user registration, channel management, and telemetry queries.</li>
 </ul>
 <blockquote>
-<p>[!WARNING]
-The passwords defined here must match the passwords set during database initialization in <code>db/init/03_roles.sql</code>. If you change these values before the first run, ensure you also update <code>db/init/03_roles.sql</code>.</p>
+<p>[!NOTE]
+<strong>Fully Automated Synchronization:</strong> Database roles and passwords are automatically generated on first cluster startup via <a href="file:///home/iimarky123/Projects/thinglarp-fr/db/init/03_roles.sh"><code>db/init/03_roles.sh</code></a>. You no longer need to edit static SQL scripts.</p>
 </blockquote>
 <hr />
 <h3 id="section-4-internal-service-mqtt-credentials">Section 4: Internal Service MQTT Credentials<a class="headerlink" href="#section-4-internal-service-mqtt-credentials" title="Permanent link">&para;</a></h3>
@@ -1612,20 +1612,17 @@ The passwords defined here must match the passwords set during database initiali
 <li><strong><code>API_MQTT_USER</code> / <code>API_MQTT_PASSWORD</code></strong>: Credentials used by FastAPI to forward HTTP data writes (<code>POST /channels/{id}/data</code>) directly into the broker.</li>
 </ul>
 <h4 id="how-mosquitto-validates-service-credentials">How Mosquitto Validates Service Credentials<a class="headerlink" href="#how-mosquitto-validates-service-credentials" title="Permanent link">&para;</a></h4>
-<p>The Mosquitto <code>mosquitto-go-auth</code> plugin validates MQTT passwords against Bcrypt hashes stored in <code>db/init/03_roles.sql</code>.</p>
-<p>If you update <code>BRIDGE_MQTT_PASSWORD</code> or <code>API_MQTT_PASSWORD</code>, you must generate a corresponding Bcrypt hash:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Generate a Bcrypt hash using Python</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>python3<span class="w"> </span>-c<span class="w"> </span><span class="s2">"import bcrypt; print(bcrypt.hashpw(b'YOUR_NEW_PASSWORD', bcrypt.gensalt(10)).decode())"</span>
-</span></code></pre></div>
-<p>Then update the <code>password_hash</code> entries in <code>db/init/03_roles.sql</code> before starting the database.</p>
+<p>The Mosquitto <code>mosquitto-go-auth</code> plugin validates MQTT passwords against Bcrypt hashes in PostgreSQL.</p>
+<p>During cluster initialization, <a href="file:///home/iimarky123/Projects/thinglarp-fr/db/init/03_roles.sh"><code>db/init/03_roles.sh</code></a> uses PostgreSQL's native <code>pgcrypto</code> extension (<code>crypt(..., gen_salt('bf', 10))</code>) to auto-compute Bcrypt hashes directly from <code>BRIDGE_MQTT_PASSWORD</code> and <code>API_MQTT_PASSWORD</code>. You do not need to generate hashes manually!</p>
+<p>Similarly, Mosquitto's Go-Auth plugin dynamically receives <code>POSTGRES_DB</code> and <code>PG_MQTT_AUTH_PASSWORD</code> from <code>.env</code> on container startup via <a href="file:///home/iimarky123/Projects/thinglarp-fr/mosquitto/docker-entrypoint.sh"><code>mosquitto/docker-entrypoint.sh</code></a> and <a href="file:///home/iimarky123/Projects/thinglarp-fr/mosquitto/mosquitto.conf.template"><code>mosquitto/mosquitto.conf.template</code></a>.</p>
 <hr />
 <h3 id="section-5-security-jwt-token-settings">Section 5: Security &amp; JWT Token Settings<a class="headerlink" href="#section-5-security-jwt-token-settings" title="Permanent link">&para;</a></h3>
 <p>These settings configure JSON Web Token issuance for user authentication in the API Gateway and Flutter app:</p>
-<div class="language-ini highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Security</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="na">JWT_SECRET</span><span class="o">=</span><span class="s">super_secret_random_jwt_key_32_chars_min</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="na">JWT_ALGORITHM</span><span class="o">=</span><span class="s">HS256</span>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="na">ACCESS_TOKEN_EXPIRE_MINUTES</span><span class="o">=</span><span class="s">15</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="na">REFRESH_TOKEN_EXPIRE_DAYS</span><span class="o">=</span><span class="s">30</span>
+<div class="language-ini highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Security</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="na">JWT_SECRET</span><span class="o">=</span><span class="s">super_secret_random_jwt_key_32_chars_min</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="na">JWT_ALGORITHM</span><span class="o">=</span><span class="s">HS256</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="na">ACCESS_TOKEN_EXPIRE_MINUTES</span><span class="o">=</span><span class="s">15</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="na">REFRESH_TOKEN_EXPIRE_DAYS</span><span class="o">=</span><span class="s">30</span>
 </span></code></pre></div>
 <ul>
 <li><strong><code>JWT_SECRET</code></strong>: Cryptographic secret key used to sign and verify user JWTs. Must be at least 32 characters long.</li>
@@ -1639,11 +1636,11 @@ The passwords defined here must match the passwords set during database initiali
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Generate JWT Secret (64 hex characters)</label><label for="__tabbed_1_2">Generate Strong Passwords</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>openssl<span class="w"> </span>rand<span class="w"> </span>-hex<span class="w"> </span><span class="m">32</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>openssl<span class="w"> </span>rand<span class="w"> </span>-hex<span class="w"> </span><span class="m">32</span>
 </span></code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>openssl<span class="w"> </span>rand<span class="w"> </span>-base64<span class="w"> </span><span class="m">24</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>openssl<span class="w"> </span>rand<span class="w"> </span>-base64<span class="w"> </span><span class="m">24</span>
 </span></code></pre></div>
 </div>
 </div>
@@ -1651,12 +1648,12 @@ The passwords defined here must match the passwords set during database initiali
 <hr />
 <h2 id="4-applying-changes-to-running-containers">4. Applying Changes to Running Containers<a class="headerlink" href="#4-applying-changes-to-running-containers" title="Permanent link">&para;</a></h2>
 <p>When you modify <code>.env</code>, restart the Docker Compose stack to apply the new environment variables:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Restart services to pick up new environment variables</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
-</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c1"># If database passwords or service credentials were changed from scratch:</span>
-</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>docker<span class="w"> </span>compose<span class="w"> </span>down<span class="w"> </span>-v
-</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>--build
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Restart services to pick up new environment variables</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># If database passwords or service credentials were changed from scratch:</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>docker<span class="w"> </span>compose<span class="w"> </span>down<span class="w"> </span>-v
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>--build
 </span></code></pre></div>
 <blockquote>
 <p>[!CAUTION]
