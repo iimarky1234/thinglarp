@@ -5,7 +5,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 import asyncpg
 
 from database import get_db
-from schemas import AdminUserOut, AdminUserCreate, AdminUserUpdate, AdminStats
+from schemas import (
+    AdminUserOut,
+    AdminUserCreate,
+    AdminUserUpdate,
+    AdminStats,
+    SystemSettingsOut,
+    SystemSettingsUpdate,
+)
 from security import require_admin, hash_user_password, CurrentUser
 
 router = APIRouter(prefix="/admin", tags=["Administration"])
@@ -203,3 +210,42 @@ async def get_admin_stats(
         total_devices=row["total_devices"],
         total_points=row["total_points"],
     )
+
+
+@router.get("/settings", response_model=SystemSettingsOut)
+async def get_system_settings(
+    admin: Annotated[CurrentUser, Depends(require_admin)],
+    db: Annotated[asyncpg.Connection, Depends(get_db)],
+):
+    """Retrieve global system settings."""
+    row = await db.fetchrow(
+        "SELECT (value = 'true'::jsonb) AS registration_enabled FROM app.system_settings WHERE key = 'registration_enabled'"
+    )
+    reg_enabled = row["registration_enabled"] if row is not None else True
+    return SystemSettingsOut(registration_enabled=reg_enabled)
+
+
+@router.patch("/settings", response_model=SystemSettingsOut)
+async def update_system_settings(
+    payload: SystemSettingsUpdate,
+    admin: Annotated[CurrentUser, Depends(require_admin)],
+    db: Annotated[asyncpg.Connection, Depends(get_db)],
+):
+    """Update global system settings."""
+    if payload.registration_enabled is not None:
+        val_str = "true" if payload.registration_enabled else "false"
+        await db.execute(
+            """
+            INSERT INTO app.system_settings (key, value, updated_at)
+            VALUES ('registration_enabled', $1::jsonb, now())
+            ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now();
+            """,
+            val_str,
+        )
+
+    row = await db.fetchrow(
+        "SELECT (value = 'true'::jsonb) AS registration_enabled FROM app.system_settings WHERE key = 'registration_enabled'"
+    )
+    reg_enabled = row["registration_enabled"] if row is not None else True
+    return SystemSettingsOut(registration_enabled=reg_enabled)
+

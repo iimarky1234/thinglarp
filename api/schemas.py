@@ -59,6 +59,13 @@ class AdminStats(BaseModel):
     total_devices: int
     total_points: int
 
+class SystemSettingsOut(BaseModel):
+    registration_enabled: bool = True
+
+class SystemSettingsUpdate(BaseModel):
+    registration_enabled: bool | None = None
+
+
 # -----------------------------------------------------------------------------
 # MQTT Session Schemas
 # -----------------------------------------------------------------------------

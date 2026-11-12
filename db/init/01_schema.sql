@@ -116,6 +116,18 @@ CREATE TABLE IF NOT EXISTS app.dashboard_widgets (
 );
 CREATE INDEX IF NOT EXISTS idx_widgets_user ON app.dashboard_widgets (user_id);
 
+-- Global system settings (e.g. registration lock, platform preferences)
+CREATE TABLE IF NOT EXISTS app.system_settings (
+    key        TEXT PRIMARY KEY,
+    value      JSONB NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+INSERT INTO app.system_settings (key, value)
+VALUES ('registration_enabled', 'true'::jsonb)
+ON CONFLICT (key) DO NOTHING;
+
+
 
 -- ============================================================================
 -- TELEMETRY SCHEMA (High-throughput TimescaleDB Hypertables)

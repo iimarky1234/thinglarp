@@ -54,6 +54,17 @@ class ApiService {
     throw Exception('Failed to get user profile');
   }
 
+  Future<bool> getPublicRegistrationEnabled() async {
+    try {
+      final res = await http.get(Uri.parse('${config.apiUrl}/auth/config'));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return data['registration_enabled'] == true;
+      }
+    } catch (_) {}
+    return true; // Default fallback to open if unreachable
+  }
+
   // MQTT Session Credentials
   Future<Map<String, dynamic>> requestMqttSession() async {
     final res = await http.post(
@@ -468,5 +479,31 @@ class ApiService {
       final err = jsonDecode(res.body)['detail'] ?? 'Failed to delete user';
       throw Exception(err);
     }
+  }
+
+  Future<bool> getRegistrationStatus() async {
+    final res = await http.get(
+      Uri.parse('${config.apiUrl}/admin/settings'),
+      headers: _headers,
+    );
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+      return data['registration_enabled'] == true;
+    }
+    throw Exception('Failed to load system settings');
+  }
+
+  Future<bool> setRegistrationStatus(bool enabled) async {
+    final res = await http.patch(
+      Uri.parse('${config.apiUrl}/admin/settings'),
+      headers: _headers,
+      body: jsonEncode({'registration_enabled': enabled}),
+    );
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+      return data['registration_enabled'] == true;
+    }
+    final err = jsonDecode(res.body)['detail'] ?? 'Failed to update system settings';
+    throw Exception(err);
   }
 }

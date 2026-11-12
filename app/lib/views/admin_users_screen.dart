@@ -13,6 +13,8 @@ class AdminUsersScreen extends StatefulWidget {
 
 class _AdminUsersScreenState extends State<AdminUsersScreen> {
   bool _isLoading = false;
+  bool _registrationEnabled = true;
+  bool _isUpdatingRegistration = false;
   List<AdminUser> _users = [];
   AdminStats? _stats;
   String _searchQuery = '';
@@ -39,11 +41,13 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       final results = await Future.wait([
         api.getAdminUsers(),
         api.getAdminStats(),
+        api.getRegistrationStatus(),
       ]);
       if (mounted) {
         setState(() {
           _users = results[0] as List<AdminUser>;
           _stats = results[1] as AdminStats;
+          _registrationEnabled = results[2] as bool;
           _isLoading = false;
         });
       }
@@ -52,6 +56,42 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         setState(() => _isLoading = false);
         messenger.showSnackBar(
           SnackBar(content: Text('Error loading users: $e'), backgroundColor: Colors.redAccent),
+        );
+      }
+    }
+  }
+
+  Future<void> _toggleRegistration(bool enable) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final api = context.read<AuthProvider>().apiService;
+    setState(() => _isUpdatingRegistration = true);
+
+    try {
+      final updated = await api.setRegistrationStatus(enable);
+      if (mounted) {
+        setState(() {
+          _registrationEnabled = updated;
+          _isUpdatingRegistration = false;
+        });
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              updated
+                  ? 'Public registration is now OPEN.'
+                  : 'Public registration is now LOCKED. New users cannot self-register.',
+            ),
+            backgroundColor: updated ? Colors.teal : Colors.deepOrange,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isUpdatingRegistration = false);
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('Failed to update registration status: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
         );
       }
     }
@@ -268,7 +308,13 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Stats Row
-                    if (_stats != null) _buildStatsCards(isDark),
+                    if (_stats != null) ...[
+                      _buildStatsCards(isDark),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // Registration Lock / Access Control Card
+                    _buildRegistrationLockCard(isDark),
                     const SizedBox(height: 20),
 
                     // Search & Title
@@ -329,6 +375,103 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                 ),
               ),
             ),
+    );
+  }
+
+  Widget _buildRegistrationLockCard(bool isDark) {
+    final isLocked = !_registrationEnabled;
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: isLocked ? Colors.redAccent.withValues(alpha: 0.5) : Colors.green.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+      ),
+      color: isLocked
+          ? (isDark ? Colors.red.withValues(alpha: 0.1) : Colors.red.shade50)
+          : (isDark ? Colors.green.withValues(alpha: 0.08) : Colors.green.shade50),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: isLocked
+                    ? Colors.redAccent.withValues(alpha: 0.2)
+                    : Colors.green.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isLocked ? Icons.lock_outline : Icons.lock_open_outlined,
+                color: isLocked ? Colors.redAccent : Colors.green,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Text(
+                        'Public Registration',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: isLocked ? Colors.redAccent : Colors.green,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          isLocked ? 'LOCKED' : 'OPEN',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    isLocked
+                        ? 'New users cannot self-register from login screen. Only admins can create accounts.'
+                        : 'Anyone with server access can create a new account from the login screen.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            _isUpdatingRegistration
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Switch.adaptive(
+                    value: _registrationEnabled,
+                    activeThumbColor: Colors.green,
+                    activeTrackColor: Colors.green.withValues(alpha: 0.5),
+                    inactiveThumbColor: Colors.redAccent,
+                    inactiveTrackColor: Colors.redAccent.withValues(alpha: 0.3),
+                    onChanged: (val) => _toggleRegistration(val),
+                  ),
+          ],
+        ),
+      ),
     );
   }
 

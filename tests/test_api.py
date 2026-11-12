@@ -81,8 +81,9 @@ async def test_auth_register_validation(mock_db):
 @pytest.mark.asyncio
 async def test_auth_register_success(mock_db):
     mock_db.fetchrow.side_effect = [
+        {"registration_enabled": True},  # System settings check
         None,  # Check existing username -> not found
-        {"id": 1, "username": "valid_user", "created_at": datetime.now(timezone.utc)},  # Insert returning
+        {"id": 1, "username": "valid_user", "is_admin": False, "created_at": datetime.now(timezone.utc)},  # Insert returning
     ]
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
@@ -91,12 +92,37 @@ async def test_auth_register_success(mock_db):
         data = res.json()
         assert data["id"] == 1
         assert data["username"] == "valid_user"
+        assert data["is_admin"] is False
+
+@pytest.mark.asyncio
+async def test_auth_register_locked(mock_db):
+    mock_db.fetchrow.side_effect = [
+        {"registration_enabled": False},  # System settings check: registration disabled
+    ]
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.post("/auth/register", json={"username": "new_user", "password": "password123"})
+        assert res.status_code == 403
+        data = res.json()
+        assert "disabled" in data["detail"].lower()
+
+@pytest.mark.asyncio
+async def test_auth_config(mock_db):
+    mock_db.fetchrow.side_effect = [
+        {"registration_enabled": False},
+    ]
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.get("/auth/config")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["registration_enabled"] is False
 
 @pytest.mark.asyncio
 async def test_channel_creation(mock_db):
     token = create_access_token(user_id=1, username="testuser")
     mock_db.fetchrow.side_effect = [
-        {"id": 1, "username": "testuser", "is_active": True}, # Auth check
+        {"id": 1, "username": "testuser", "is_active": True, "is_admin": False}, # Auth check
         {
             "id": 10,
             "owner_id": 1,
@@ -119,3 +145,22 @@ async def test_channel_creation(mock_db):
         data = res.json()
         assert data["id"] == 10
         assert data["name"] == "Weather Station"
+
+@pytest.mark.asyncio
+async def test_admin_settings_toggle(mock_db):
+    admin_token = create_access_token(user_id=1, username="admin")
+    mock_db.fetchrow.side_effect = [
+        {"id": 1, "username": "admin", "is_active": True, "is_admin": True}, # Auth check
+        {"registration_enabled": False}, # Return after update
+    ]
+
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.patch(
+            "/admin/settings",
+            json={"registration_enabled": False},
+            headers=headers,
+        )
+        assert res.status_code == 200
+        assert res.json()["registration_enabled"] is False
+

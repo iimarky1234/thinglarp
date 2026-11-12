@@ -7,7 +7,14 @@ import asyncpg
 
 from config import settings
 from database import get_db
-from schemas import UserRegister, UserLogin, TokenResponse, RefreshTokenRequest, UserOut
+from schemas import (
+    UserRegister,
+    UserLogin,
+    TokenResponse,
+    RefreshTokenRequest,
+    UserOut,
+    SystemSettingsOut,
+)
 from security import (
     hash_user_password,
     verify_user_password,
@@ -20,8 +27,28 @@ from security import (
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
+@router.get("/config", response_model=SystemSettingsOut)
+async def get_public_auth_config(db: Annotated[asyncpg.Connection, Depends(get_db)]):
+    """Retrieve public authentication settings (e.g. whether registration is enabled)."""
+    row = await db.fetchrow(
+        "SELECT (value = 'true'::jsonb) AS registration_enabled FROM app.system_settings WHERE key = 'registration_enabled'"
+    )
+    reg_enabled = row["registration_enabled"] if row is not None else True
+    return SystemSettingsOut(registration_enabled=reg_enabled)
+
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 async def register(payload: UserRegister, db: Annotated[asyncpg.Connection, Depends(get_db)]):
+    # Check if registration is enabled
+    setting = await db.fetchrow(
+        "SELECT (value = 'true'::jsonb) AS registration_enabled FROM app.system_settings WHERE key = 'registration_enabled'"
+    )
+    is_enabled = setting["registration_enabled"] if setting is not None else True
+    if not is_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Public registration is currently disabled by system administrator",
+        )
+
     # Check if username exists
     existing = await db.fetchrow("SELECT id FROM app.users WHERE username = $1", payload.username)
     if existing:

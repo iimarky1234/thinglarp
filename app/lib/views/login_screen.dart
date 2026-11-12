@@ -14,7 +14,27 @@ class _LoginScreenState extends State<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isRegister = false;
+  bool _registrationEnabled = true;
   final _formKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _checkRegistrationStatus();
+  }
+
+  Future<void> _checkRegistrationStatus() async {
+    final api = context.read<AuthProvider>().apiService;
+    final enabled = await api.getPublicRegistrationEnabled();
+    if (mounted) {
+      setState(() {
+        _registrationEnabled = enabled;
+        if (!_registrationEnabled && _isRegister) {
+          _isRegister = false;
+        }
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -143,20 +163,48 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                   ),
                   const SizedBox(height: 16),
-                  TextButton(
-                    onPressed: auth.isLoading
-                        ? null
-                        : () {
-                            setState(() {
-                              _isRegister = !_isRegister;
-                            });
-                          },
-                    child: Text(
-                      _isRegister
-                          ? 'Already have an account? Sign in'
-                          : 'Don\'t have an account? Register now',
+                  if (!_registrationEnabled) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.lock_outline, size: 20, color: Colors.amber),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Public registration is closed. Contact an administrator to request an account.',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.amber.shade200
+                                    : Colors.amber.shade900,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                  ] else ...[
+                    TextButton(
+                      onPressed: auth.isLoading
+                          ? null
+                          : () {
+                              setState(() {
+                                _isRegister = !_isRegister;
+                              });
+                            },
+                      child: Text(
+                        _isRegister
+                            ? 'Already have an account? Sign in'
+                            : 'Don\'t have an account? Register now',
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
