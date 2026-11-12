@@ -151,7 +151,48 @@ jobs:
           if-no-files-found: error
 
   # ===========================================================================
-  # 4. WEB BUILD
+  # 4. MACOS BUILD
+  # ===========================================================================
+  build-macos:
+    name: Build macOS Desktop
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          cache: true
+
+      - name: Enable macOS Desktop
+        run: flutter config --enable-macos-desktop
+
+      - name: Install App Dependencies
+        run: |
+          cd app
+          flutter pub get
+
+      - name: Build macOS Release App
+        run: |
+          cd app
+          flutter build macos --release
+
+      - name: Package macOS App (ZIP)
+        run: |
+          cd app/build/macos/Build/Products/Release
+          zip -r -y ../../../../../../thinglarp-macos.zip *.app
+
+      - name: Upload macOS Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: thinglarp-macos
+          path: thinglarp-macos.zip
+          if-no-files-found: error
+
+  # ===========================================================================
+  # 5. WEB BUILD
   # ===========================================================================
   build-web:
     name: Build Web App
@@ -191,11 +232,11 @@ jobs:
           if-no-files-found: error
 
   # ===========================================================================
-  # 5. GITHUB RELEASE (Triggered on git tags, published release, or manual dispatch)
+  # 6. GITHUB RELEASE (Triggered on git tags, published release, or manual dispatch)
   # ===========================================================================
   create-release:
     name: Create & Publish GitHub Release
-    needs: [build-linux, build-android, build-windows, build-web]
+    needs: [build-linux, build-android, build-windows, build-macos, build-web]
     if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '')
     runs-on: ubuntu-latest
     steps:
