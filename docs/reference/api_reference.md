@@ -16,10 +16,27 @@ Authorization: Bearer <ACCESS_TOKEN>
 
 ## Auth Endpoints
 
+### Public Auth Configuration
+```http
+GET /auth/config
+```
+Returns public authentication settings, such as whether self-registration is enabled. Does not require authentication.
+
+**Response (200 OK):**
+```json
+{
+  "registration_enabled": true
+}
+```
+
+---
+
 ### Register User
 ```http
 POST /auth/register
 ```
+*Note: If public registration is locked by an administrator, this endpoint rejects requests with `403 Forbidden` (`detail: "Public registration is currently disabled by system administrator"`).*
+
 **Request Body:**
 ```json
 {
@@ -490,3 +507,41 @@ GET /admin/stats
   "total_points": 1450200
 }
 ```
+
+---
+
+### Get System Settings
+```http
+GET /admin/settings
+```
+*Requires administrator privileges.*
+
+**Response (200 OK):**
+```json
+{
+  "registration_enabled": true
+}
+```
+
+---
+
+### Update System Settings (Lock/Unlock Registration)
+```http
+PATCH /admin/settings
+```
+*Requires administrator privileges.*
+
+**Request Body:**
+```json
+{
+  "registration_enabled": false
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "registration_enabled": false
+}
+```
+
