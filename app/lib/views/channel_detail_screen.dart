@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -11,11 +12,17 @@ import '../providers/channel_provider.dart';
 import '../services/mqtt_service.dart';
 import '../config.dart';
 import 'api_tutorial_screen.dart';
+import 'login_screen.dart';
 
 class ChannelDetailScreen extends StatefulWidget {
   final Channel channel;
+  final bool isReadOnly;
 
-  const ChannelDetailScreen({super.key, required this.channel});
+  const ChannelDetailScreen({
+    super.key,
+    required this.channel,
+    this.isReadOnly = false,
+  });
 
   @override
   State<ChannelDetailScreen> createState() => _ChannelDetailScreenState();
@@ -23,17 +30,98 @@ class ChannelDetailScreen extends StatefulWidget {
 
 class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  Timer? _pollingTimer;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: widget.isReadOnly ? 1 : 3, vsync: this);
+    if (widget.isReadOnly) {
+      _pollingTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+        if (mounted) {
+          final prov = context.read<ChannelProvider>();
+          prov.loadLatestSnapshot(widget.channel.id);
+          prov.loadHistoricalData(widget.channel.id, resolution: prov.currentResolution);
+        }
+      });
+    }
   }
 
   @override
   void dispose() {
+    _pollingTimer?.cancel();
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _shareChannelLink() async {
+    final url = '${AppConfig().webAppUrl}/#/channel/${widget.channel.id}';
+    await Clipboard.setData(ClipboardData(text: url));
+    if (!mounted) return;
+
+    if (widget.channel.isPublic) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Public channel link copied: $url'),
+          backgroundColor: Colors.teal,
+          action: SnackBarAction(label: 'OK', textColor: Colors.white, onPressed: () {}),
+        ),
+      );
+    } else {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.orangeAccent),
+              SizedBox(width: 8),
+              Text('Channel is Private'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Share link copied to clipboard:\n$url\n'),
+              const Text(
+                'Note: Anyone who opens this link will receive an Access Denied (403) error because this channel is currently Private.',
+                style: TextStyle(color: Colors.grey, fontSize: 13),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Dismiss'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                final prov = context.read<ChannelProvider>();
+                try {
+                  await prov.updateChannel(widget.channel.id, isPublic: true);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Channel marked as Public! Anyone with the link can view.'),
+                        backgroundColor: Colors.teal,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to make channel public: $e')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Make Channel Public'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   void _showAddDeviceDialog() {
@@ -1018,87 +1106,144 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.channel.name),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.send_to_mobile, color: Colors.amberAccent),
-            tooltip: 'Downlink Commands',
-            onPressed: _showCommandsDialog,
-          ),
-          IconButton(
-            icon: const Icon(Icons.school_outlined, color: Colors.cyanAccent),
-            tooltip: 'API Tutorials & Code Generator',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ApiTutorialScreen(channel: widget.channel),
+        title: Row(
+          children: [
+            Expanded(child: Text(widget.channel.name, overflow: TextOverflow.ellipsis)),
+            if (widget.isReadOnly) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.blueAccent.withValues(alpha: 0.2),
+                  border: Border.all(color: Colors.blueAccent.withValues(alpha: 0.4)),
+                  borderRadius: BorderRadius.circular(6),
                 ),
-              );
-            },
-          ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert),
-            tooltip: 'Channel Actions',
-            onSelected: (val) {
-              if (val == 'export') _showExportDialog();
-              if (val == 'import') _showImportDialog();
-              if (val == 'clear') _showClearDataDialog();
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'export',
-                child: Row(
-                  children: [
-                    Icon(Icons.download, size: 20, color: Colors.cyanAccent),
-                    SizedBox(width: 10),
-                    Text('Download / Export Data'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'import',
-                child: Row(
-                  children: [
-                    Icon(Icons.upload_file, size: 20, color: Colors.tealAccent),
-                    SizedBox(width: 10),
-                    Text('Import Data (CSV)'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'clear',
-                child: Row(
-                  children: [
-                    Icon(Icons.delete_sweep, size: 20, color: Colors.redAccent),
-                    SizedBox(width: 10),
-                    Text('Clear All Telemetry Data'),
-                  ],
-                ),
+                child: const Text('VIEW ONLY', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blueAccent)),
               ),
             ],
-          ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(icon: Icon(Icons.dashboard_outlined), text: 'Telemetry'),
-            Tab(icon: Icon(Icons.memory), text: 'Devices'),
-            Tab(icon: Icon(Icons.key), text: 'API Keys'),
           ],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          // Tab 1: Telemetry Dashboard
-          _buildTelemetryTab(provider),
-          // Tab 2: Hardware Devices
-          _buildDevicesTab(provider),
-          // Tab 3: API Keys
-          _buildApiKeysTab(provider),
+        actions: [
+          if (widget.isReadOnly) ...[
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Refresh Telemetry',
+              onPressed: () {
+                provider.loadFields(widget.channel.id);
+                provider.loadHistoricalData(widget.channel.id, resolution: provider.currentResolution);
+                provider.loadLatestSnapshot(widget.channel.id);
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.share, color: Colors.tealAccent),
+              tooltip: 'Share Public Link',
+              onPressed: _shareChannelLink,
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.login, size: 16),
+                label: const Text('Sign In'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueAccent,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                ),
+                onPressed: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  );
+                },
+              ),
+            ),
+          ] else ...[
+            IconButton(
+              icon: const Icon(Icons.share, color: Colors.tealAccent),
+              tooltip: 'Share Public Link',
+              onPressed: _shareChannelLink,
+            ),
+            IconButton(
+              icon: const Icon(Icons.send_to_mobile, color: Colors.amberAccent),
+              tooltip: 'Downlink Commands',
+              onPressed: _showCommandsDialog,
+            ),
+            IconButton(
+              icon: const Icon(Icons.school_outlined, color: Colors.cyanAccent),
+              tooltip: 'API Tutorials & Code Generator',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ApiTutorialScreen(channel: widget.channel),
+                  ),
+                );
+              },
+            ),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              tooltip: 'Channel Actions',
+              onSelected: (val) {
+                if (val == 'export') _showExportDialog();
+                if (val == 'import') _showImportDialog();
+                if (val == 'clear') _showClearDataDialog();
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'export',
+                  child: Row(
+                    children: [
+                      Icon(Icons.download, size: 20, color: Colors.cyanAccent),
+                      SizedBox(width: 10),
+                      Text('Download / Export Data'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'import',
+                  child: Row(
+                    children: [
+                      Icon(Icons.upload_file, size: 20, color: Colors.tealAccent),
+                      SizedBox(width: 10),
+                      Text('Import Data (CSV)'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'clear',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_sweep, size: 20, color: Colors.redAccent),
+                      SizedBox(width: 10),
+                      Text('Clear All Telemetry Data'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
+        bottom: widget.isReadOnly
+            ? null
+            : TabBar(
+                controller: _tabController,
+                tabs: const [
+                  Tab(icon: Icon(Icons.dashboard_outlined), text: 'Telemetry'),
+                  Tab(icon: Icon(Icons.memory), text: 'Devices'),
+                  Tab(icon: Icon(Icons.key), text: 'API Keys'),
+                ],
+              ),
       ),
+      body: widget.isReadOnly
+          ? _buildTelemetryTab(provider)
+          : TabBarView(
+              controller: _tabController,
+              children: [
+                _buildTelemetryTab(provider),
+                _buildDevicesTab(provider),
+                _buildApiKeysTab(provider),
+              ],
+            ),
     );
   }
 
@@ -1270,7 +1415,7 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
   }
 
   Widget _buildWidgetTypeMenu(BuildContext context, ChannelField field) {
-    if (field.id <= 0) return const SizedBox();
+    if (widget.isReadOnly || field.id <= 0) return const SizedBox();
     return PopupMenuButton<String>(
       icon: const Icon(Icons.tune, size: 18, color: Colors.grey),
       tooltip: 'Change Widget Type',

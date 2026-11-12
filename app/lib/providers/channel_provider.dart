@@ -61,23 +61,52 @@ class ChannelProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> selectChannel(Channel channel) async {
+  Future<Channel?> updateChannel(int channelId, {String? name, String? description, bool? isPublic}) async {
+    try {
+      final updated = await apiService.updateChannel(channelId, name: name, description: description, isPublic: isPublic);
+      final idx = channels.indexWhere((c) => c.id == channelId);
+      if (idx != -1) {
+        channels[idx] = updated;
+      }
+      if (activeChannel?.id == channelId) {
+        activeChannel = updated;
+      }
+      notifyListeners();
+      return updated;
+    } catch (e) {
+      debugPrint('Error updating channel: $e');
+      return null;
+    }
+  }
+
+  Future<void> selectChannel(Channel channel, {bool isReadOnly = false}) async {
     activeChannel = channel;
     chartPoints.clear();
     latestValues.clear();
     notifyListeners();
 
-    // Load channel metadata & history
-    await Future.wait([
-      loadFields(channel.id),
-      loadDevices(channel.id),
-      loadApiKeys(channel.id),
-      loadHistoricalData(channel.id),
-      loadLatestSnapshot(channel.id),
-    ]);
+    if (isReadOnly) {
+      await Future.wait([
+        loadFields(channel.id),
+        loadHistoricalData(channel.id),
+        loadLatestSnapshot(channel.id),
+      ]);
+      try {
+        await startLiveStream();
+      } catch (_) {}
+    } else {
+      // Load channel metadata & history
+      await Future.wait([
+        loadFields(channel.id),
+        loadDevices(channel.id),
+        loadApiKeys(channel.id),
+        loadHistoricalData(channel.id),
+        loadLatestSnapshot(channel.id),
+      ]);
 
-    // Automatically connect live stream
-    await startLiveStream();
+      // Automatically connect live stream
+      await startLiveStream();
+    }
   }
 
   Future<void> loadFields(int channelId) async {

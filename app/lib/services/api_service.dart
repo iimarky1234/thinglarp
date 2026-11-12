@@ -78,6 +78,17 @@ class ApiService {
   }
 
   // Channels
+  Future<Channel> getChannel(int channelId) async {
+    final res = await http.get(
+      Uri.parse('${config.apiUrl}/channels/$channelId'),
+      headers: _headers,
+    );
+    if (res.statusCode == 200) {
+      return Channel.fromJson(jsonDecode(res.body));
+    }
+    throw Exception('Failed to load channel ($channelId): ${res.body}');
+  }
+
   Future<List<Channel>> getChannels() async {
     final res = await http.get(
       Uri.parse('${config.apiUrl}/channels'),
@@ -104,6 +115,23 @@ class ApiService {
       return Channel.fromJson(jsonDecode(res.body));
     }
     throw Exception('Failed to create channel');
+  }
+
+  Future<Channel> updateChannel(int channelId, {String? name, String? description, bool? isPublic}) async {
+    final body = <String, dynamic>{};
+    if (name != null) body['name'] = name;
+    if (description != null) body['description'] = description;
+    if (isPublic != null) body['is_public'] = isPublic;
+
+    final res = await http.patch(
+      Uri.parse('${config.apiUrl}/channels/$channelId'),
+      headers: _headers,
+      body: jsonEncode(body),
+    );
+    if (res.statusCode == 200) {
+      return Channel.fromJson(jsonDecode(res.body));
+    }
+    throw Exception('Failed to update channel: ${res.body}');
   }
 
   Future<void> deleteChannel(int channelId) async {

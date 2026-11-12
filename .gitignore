@@ -34,9 +34,10 @@ __pycache__/
 .coverage.*
 htmlcov/
 *.egg-info/
-dist/
-build/
+/dist/
+/build/
 *.egg
+!web/dist/
 
 # ------------------------------------------------------------------------------
 # Documentation Build Output

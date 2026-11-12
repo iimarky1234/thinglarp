@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../config.dart';
 import '../providers/auth_provider.dart';
 import '../providers/channel_provider.dart';
 import 'channel_detail_screen.dart';
@@ -91,6 +93,68 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
         ),
       ),
     );
+  }
+
+  void _shareChannel(BuildContext context, dynamic ch) async {
+    final url = '${AppConfig().webAppUrl}/#/channel/${ch.id}';
+    await Clipboard.setData(ClipboardData(text: url));
+    if (!context.mounted) return;
+
+    if (ch.isPublic) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Public channel link copied: $url'),
+          backgroundColor: Colors.teal,
+          action: SnackBarAction(label: 'OK', textColor: Colors.white, onPressed: () {}),
+        ),
+      );
+    } else {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.orangeAccent),
+              SizedBox(width: 8),
+              Text('Channel is Private'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Share link copied to clipboard:\n$url\n'),
+              const Text(
+                'Note: Anyone opening this link will see an Access Denied error unless the channel is made Public.',
+                style: TextStyle(color: Colors.grey, fontSize: 13),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Dismiss'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                final prov = context.read<ChannelProvider>();
+                await prov.updateChannel(ch.id, isPublic: true);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Channel marked as Public! Anyone with the link can view.'),
+                      backgroundColor: Colors.teal,
+                    ),
+                  );
+                }
+              },
+              child: const Text('Make Public Now'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   @override
@@ -215,7 +279,17 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                               Text('Created $dateStr', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                             ],
                           ),
-                          trailing: const Icon(Icons.chevron_right),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.share, size: 20, color: Colors.blueAccent),
+                                tooltip: 'Share Public Link',
+                                onPressed: () => _shareChannel(context, ch),
+                              ),
+                              const Icon(Icons.chevron_right),
+                            ],
+                          ),
                           onTap: () {
                             channelProv.selectChannel(ch);
                             Navigator.push(

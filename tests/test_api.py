@@ -188,3 +188,81 @@ async def test_channel_history(mock_db):
         assert data["feeds"][0]["payload"]["temp"] == 25.5
 
 
+@pytest.mark.asyncio
+async def test_get_public_channel_unauthenticated(mock_db):
+    mock_db.fetchrow.return_value = {
+        "id": 42,
+        "owner_id": 1,
+        "name": "Public Weather",
+        "description": "Public channel test",
+        "is_public": True,
+        "max_fields": 500,
+        "created_at": datetime.now(timezone.utc),
+    }
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.get("/channels/42")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["id"] == 42
+        assert data["name"] == "Public Weather"
+        assert data["is_public"] is True
+
+
+@pytest.mark.asyncio
+async def test_get_private_channel_unauthenticated(mock_db):
+    mock_db.fetchrow.return_value = {
+        "id": 43,
+        "owner_id": 1,
+        "name": "Private Vault",
+        "description": "Private test",
+        "is_public": False,
+        "max_fields": 500,
+        "created_at": datetime.now(timezone.utc),
+    }
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.get("/channels/43")
+        assert res.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_list_public_channel_fields_unauthenticated(mock_db):
+    mock_db.fetchrow.return_value = {
+        "owner_id": 1,
+        "is_public": True,
+    }
+    mock_db.fetch.return_value = [
+        {
+            "id": 101,
+            "channel_id": 42,
+            "key": "temp",
+            "label": "Temperature",
+            "unit": "°C",
+            "value_type": "float",
+            "widget_type": "line_chart",
+            "first_seen_at": datetime.now(timezone.utc),
+        }
+    ]
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.get("/channels/42/fields")
+        assert res.status_code == 200
+        data = res.json()
+        assert len(data) == 1
+        assert data[0]["key"] == "temp"
+
+
+@pytest.mark.asyncio
+async def test_list_private_channel_fields_unauthenticated(mock_db):
+    mock_db.fetchrow.return_value = {
+        "owner_id": 1,
+        "is_public": False,
+    }
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.get("/channels/43/fields")
+        assert res.status_code == 403
+
+
+

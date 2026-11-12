@@ -6,7 +6,7 @@ import asyncpg
 
 from database import get_db
 from schemas import ChannelCreate, ChannelUpdate, ChannelOut, FieldOut, FieldUpdate
-from security import get_current_user, CurrentUser
+from security import get_current_user, get_optional_current_user, CurrentUser
 
 router = APIRouter(prefix="/channels", tags=["Channels"])
 
@@ -56,14 +56,15 @@ async def create_channel(
 @router.get("/{channel_id}", response_model=ChannelOut)
 async def get_channel(
     channel_id: int,
-    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    current_user: Annotated[CurrentUser | None, Depends(get_optional_current_user)],
     db: Annotated[asyncpg.Connection, Depends(get_db)],
 ):
     row = await db.fetchrow("SELECT * FROM app.channels WHERE id = $1", channel_id)
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Channel not found")
-    if row["owner_id"] != current_user.id and not row["is_public"]:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    if not row["is_public"]:
+        if not current_user or row["owner_id"] != current_user.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     return ChannelOut(**dict(row))
 
 @router.patch("/{channel_id}", response_model=ChannelOut)
@@ -109,14 +110,15 @@ async def delete_channel(
 @router.get("/{channel_id}/fields", response_model=list[FieldOut])
 async def list_channel_fields(
     channel_id: int,
-    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    current_user: Annotated[CurrentUser | None, Depends(get_optional_current_user)],
     db: Annotated[asyncpg.Connection, Depends(get_db)],
 ):
     channel = await db.fetchrow("SELECT owner_id, is_public FROM app.channels WHERE id = $1", channel_id)
     if not channel:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Channel not found")
-    if channel["owner_id"] != current_user.id and not channel["is_public"]:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    if not channel["is_public"]:
+        if not current_user or channel["owner_id"] != current_user.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     rows = await db.fetch(
         """
