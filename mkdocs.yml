@@ -1,7 +1,6 @@
-site_name: ThingLarp IoT Platform
-site_url: https://thinglarp.iimarky123.io.vn
-site_description: Production-grade, unconstrained IoT telemetry platform alternative to ThingSpeak
-site_author: ThingLarp Contributors
+site_name: ThingLarp Documentation
+site_url: https://thinglarp.iimarky123.io.vn/docs/
+site_description: Learn how to stream, store, and visualize IoT telemetry with ThingLarp
 repo_name: iimarky1234/thinglarp
 repo_url: https://github.com/iimarky1234/thinglarp
 docs_dir: docs
@@ -41,17 +40,12 @@ extra_css:
 markdown_extensions:
   - admonition
   - pymdownx.details
-  - pymdownx.superfences:
-      custom_fences:
-        - name: mermaid
-          class: mermaid
-          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.superfences
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
       pygments_lang_class: true
   - pymdownx.inlinehilite
-  - pymdownx.snippets
   - pymdownx.tabbed:
       alternate_style: true
   - tables
@@ -61,26 +55,18 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - Architecture:
-      - Overview: architecture/overview.md
-      - Block Diagrams: architecture/block_diagrams.md
-      - Database & Hypertables: architecture/database.md
-  - Services:
-      - Mosquitto Broker: services/mosquitto.md
-      - Ingestion Bridge: services/bridge.md
-      - FastAPI Gateway: services/api.md
-      - Traefik Edge Proxy: services/traefik.md
-  - Flutter Application:
-      - Architecture & Setup: client/flutter.md
-      - Live MQTT Streaming: client/live_streaming.md
-      - Integration Examples: client/integration_examples.md
-  - Guides:
-      - Getting Started: guides/getting_started.md
-      - API Developer Tutorial: guides/api_tutorial.md
-      - Environment Configuration (.env): guides/env_configuration.md
-      - Hardware Provisioning: guides/hardware_provisioning.md
-      - E2E Simulation & Testing: guides/simulation.md
+  - Getting Started:
+      - Quickstart: getting_started.md
+      - Web Dashboard: dashboard.md
+      - Public Link Sharing: public_sharing.md
+  - Ingestion:
+      - HTTP REST API: sending_data_http.md
+      - MQTT Streaming: sending_data_mqtt.md
+  - Hardware Integration:
+      - ESP32 (Arduino C++): hardware/esp32.md
+      - MicroPython: hardware/micropython.md
+      - Python Scripting: hardware/python.md
+      - Downlink Commands: hardware/commands.md
   - Reference:
       - REST API Reference: reference/api_reference.md
       - MQTT Topics & ACLs: reference/mqtt_topics.md
-      - Environment Variables: reference/environment_variables.md

@@ -6,17 +6,15 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Production-grade, unconstrained IoT telemetry platform alternative to ThingSpeak">
-      
-      
-        <meta name="author" content="ThingLarp Contributors">
-      
-      
-        <link rel="canonical" href="https://thinglarp.iimarky123.io.vn/">
+        <meta name="description" content="Learn how to stream, store, and visualize IoT telemetry with ThingLarp">
       
       
       
-        <link rel="next" href="architecture/overview/">
+        <link rel="canonical" href="https://thinglarp.iimarky123.io.vn/docs/">
+      
+      
+      
+        <link rel="next" href="getting_started/">
       
       
         
@@ -27,7 +25,7 @@
     
     
       
-        <title>ThingLarp IoT Platform</title>
+        <title>ThingLarp Documentation</title>
       
     
     
@@ -80,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#thinglarp-iot-platform" class="md-skip">
+        <a href="#thinglarp-documentation" class="md-skip">
           Skip to content
         </a>
       
@@ -94,7 +92,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="." title="ThingLarp IoT Platform" class="md-header__button md-logo" aria-label="ThingLarp IoT Platform" data-md-component="logo">
+    <a href="." title="ThingLarp Documentation" class="md-header__button md-logo" aria-label="ThingLarp Documentation" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -108,7 +106,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            ThingLarp IoT Platform
+            ThingLarp Documentation
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -250,11 +248,11 @@
     
     
       <li class="md-tabs__item">
-        <a href="architecture/overview/" class="md-tabs__link">
+        <a href="getting_started/" class="md-tabs__link">
           
   
   
-  Architecture
+  Getting Started
 
         </a>
       </li>
@@ -270,11 +268,11 @@
     
     
       <li class="md-tabs__item">
-        <a href="services/mosquitto/" class="md-tabs__link">
+        <a href="sending_data_http/" class="md-tabs__link">
           
   
   
-  Services
+  Ingestion
 
         </a>
       </li>
@@ -290,31 +288,11 @@
     
     
       <li class="md-tabs__item">
-        <a href="client/flutter/" class="md-tabs__link">
+        <a href="hardware/esp32/" class="md-tabs__link">
           
   
   
-  Flutter Application
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="guides/getting_started/" class="md-tabs__link">
-          
-  
-  
-  Guides
+  Hardware Integration
 
         </a>
       </li>
@@ -364,13 +342,13 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="." title="ThingLarp IoT Platform" class="md-nav__button md-logo" aria-label="ThingLarp IoT Platform" data-md-component="logo">
+    <a href="." title="ThingLarp Documentation" class="md-nav__button md-logo" aria-label="ThingLarp Documentation" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
 
     </a>
-    ThingLarp IoT Platform
+    ThingLarp Documentation
   </label>
   
     <div class="md-nav__source">
@@ -454,10 +432,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#key-capabilities" class="md-nav__link">
+  <a href="#why-thinglarp" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Key Capabilities
+        Why ThingLarp?
       
     </span>
   </a>
@@ -465,32 +443,60 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#system-architecture-at-a-glance" class="md-nav__link">
+  <a href="#3-minute-quickstart" class="md-nav__link">
     <span class="md-ellipsis">
       
-        System Architecture at a Glance
+        3-Minute Quickstart
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3-Minute Quickstart">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-create-a-channel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Create a Channel
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#technology-stack" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#2-get-an-api-key-or-device-credentials" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Technology Stack
+        2. Get an API Key or Device Credentials
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#quick-navigation" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#3-send-telemetry" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Quick Navigation
+        3. Send Telemetry
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#explore-the-guides" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Explore the Guides
       
     </span>
   </a>
@@ -537,7 +543,7 @@
   <span class="md-ellipsis">
     
   
-    Architecture
+    Getting Started
   
 
     
@@ -553,7 +559,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Architecture
+    Getting Started
   
 
           </label>
@@ -566,14 +572,14 @@
   
   
     <li class="md-nav__item">
-      <a href="architecture/overview/" class="md-nav__link">
+      <a href="getting_started/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Overview
+    Quickstart
   
 
     
@@ -594,14 +600,14 @@
   
   
     <li class="md-nav__item">
-      <a href="architecture/block_diagrams/" class="md-nav__link">
+      <a href="dashboard/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Block Diagrams
+    Web Dashboard
   
 
     
@@ -622,14 +628,14 @@
   
   
     <li class="md-nav__item">
-      <a href="architecture/database/" class="md-nav__link">
+      <a href="public_sharing/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Database & Hypertables
+    Public Link Sharing
   
 
     
@@ -682,7 +688,7 @@
   <span class="md-ellipsis">
     
   
-    Services
+    Ingestion
   
 
     
@@ -698,7 +704,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Services
+    Ingestion
   
 
           </label>
@@ -711,14 +717,14 @@
   
   
     <li class="md-nav__item">
-      <a href="services/mosquitto/" class="md-nav__link">
+      <a href="sending_data_http/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Mosquitto Broker
+    HTTP REST API
   
 
     
@@ -739,70 +745,14 @@
   
   
     <li class="md-nav__item">
-      <a href="services/bridge/" class="md-nav__link">
+      <a href="sending_data_mqtt/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Ingestion Bridge
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="services/api/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    FastAPI Gateway
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="services/traefik/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Traefik Edge Proxy
+    MQTT Streaming
   
 
     
@@ -855,7 +805,7 @@
   <span class="md-ellipsis">
     
   
-    Flutter Application
+    Hardware Integration
   
 
     
@@ -871,7 +821,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Flutter Application
+    Hardware Integration
   
 
           </label>
@@ -884,14 +834,14 @@
   
   
     <li class="md-nav__item">
-      <a href="client/flutter/" class="md-nav__link">
+      <a href="hardware/esp32/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Architecture & Setup
+    ESP32 (Arduino C++)
   
 
     
@@ -912,14 +862,14 @@
   
   
     <li class="md-nav__item">
-      <a href="client/live_streaming/" class="md-nav__link">
+      <a href="hardware/micropython/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Live MQTT Streaming
+    MicroPython
   
 
     
@@ -940,14 +890,42 @@
   
   
     <li class="md-nav__item">
-      <a href="client/integration_examples/" class="md-nav__link">
+      <a href="hardware/python/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Integration Examples
+    Python Scripting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="hardware/commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Downlink Commands
   
 
     
@@ -1000,7 +978,7 @@
   <span class="md-ellipsis">
     
   
-    Guides
+    Reference
   
 
     
@@ -1013,207 +991,6 @@
         
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Guides
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="guides/getting_started/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Getting Started
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="guides/api_tutorial/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    API Developer Tutorial
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="guides/env_configuration/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Environment Configuration (.env)
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="guides/hardware_provisioning/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Hardware Provisioning
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="guides/simulation/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    E2E Simulation & Testing
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
-        
-          
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Reference
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1279,34 +1056,6 @@
 
               
             
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="reference/environment_variables/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Environment Variables
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
           </ul>
         </nav>
       
@@ -1341,10 +1090,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#key-capabilities" class="md-nav__link">
+  <a href="#why-thinglarp" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Key Capabilities
+        Why ThingLarp?
       
     </span>
   </a>
@@ -1352,32 +1101,60 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#system-architecture-at-a-glance" class="md-nav__link">
+  <a href="#3-minute-quickstart" class="md-nav__link">
     <span class="md-ellipsis">
       
-        System Architecture at a Glance
+        3-Minute Quickstart
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3-Minute Quickstart">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-create-a-channel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Create a Channel
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#technology-stack" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#2-get-an-api-key-or-device-credentials" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Technology Stack
+        2. Get an API Key or Device Credentials
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#quick-navigation" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#3-send-telemetry" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Quick Navigation
+        3. Send Telemetry
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#explore-the-guides" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Explore the Guides
       
     </span>
   </a>
@@ -1404,151 +1181,97 @@
   
 
 
-<h1 id="thinglarp-iot-platform">ThingLarp IoT Platform<a class="headerlink" href="#thinglarp-iot-platform" title="Permanent link">&para;</a></h1>
-<p><strong>ThingLarp</strong> is a high-performance, completely unconstrained IoT telemetry and analytics platform built as an open, modern alternative to ThingSpeak. </p>
-<p>It provides native MQTT ingestion, dynamic field auto-discovery without prior schema definitions, microsecond time-series storage powered by TimescaleDB, and an cross-platform Flutter dashboard for desktop, mobile, and web.</p>
-<div class="admonition note">
-<p class="admonition-title">⚡ Vibe Coding Disclaimer</p>
-<p>This project was mostly <strong>vibe coded</strong> by <strong>Antigravity</strong> (Google DeepMind's agentic AI assistant) in close collaboration with <strong>@iimarky123</strong>. While designed with production-grade architectural patterns, microservices, and end-to-end verification tests, please review all configurations and security secrets before deploying to critical production infrastructure.</p>
-</div>
+<h1 id="thinglarp-documentation">ThingLarp Documentation<a class="headerlink" href="#thinglarp-documentation" title="Permanent link">&para;</a></h1>
+<p>Welcome to <strong>ThingLarp</strong>, a fast, unconstrained IoT telemetry platform built as an open modern alternative to ThingSpeak.</p>
+<p>ThingLarp lets you connect microcontrollers, sensors, and hardware devices to ingest data over standard <strong>HTTP REST</strong> or <strong>MQTT</strong>, store time-series metrics with zero rate limits, and visualize your feeds on a real-time web dashboard.</p>
 <hr />
-<h2 id="key-capabilities">Key Capabilities<a class="headerlink" href="#key-capabilities" title="Permanent link">&para;</a></h2>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:5"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><input id="__tabbed_1_4" name="__tabbed_1" type="radio" /><input id="__tabbed_1_5" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">🚀 No Rate Limits</label><label for="__tabbed_1_2">📈 Unlimited Dynamic Fields</label><label for="__tabbed_1_3">🔒 Strict Multi-Tenant Security</label><label for="__tabbed_1_4">⚡ TimescaleDB Continuous Aggregates</label><label for="__tabbed_1_5">📱 Cross-Platform Flutter Dashboard</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block">
-<p>Unlike legacy IoT platforms that throttle free tiers to 1 update every 15–60 seconds, ThingLarp enforces <strong>zero artificial rate limits</strong>. High-frequency sensors (vibration, acoustics, motor RPM) can stream at 50Hz–100Hz continuously.</p>
-</div>
-<div class="tabbed-block">
-<p>No more restriction to 8 numeric fields (<code>field1</code>...<code>field8</code>). Devices can publish arbitrary JSON key-value pairs (e.g. <code>{"temp": 24.5, "co2_ppm": 420, "gyro_z": -0.012}</code>). Fields are dynamically discovered, indexed, and charted on the fly.</p>
-</div>
-<div class="tabbed-block">
-<p>Every MQTT publish and subscribe is strictly authorized at the broker level using <code>mosquitto-go-auth</code> and PostgreSQL views. Devices can only publish to their provisioned channel; client apps can only subscribe to channels they own or are public.</p>
-</div>
-<div class="tabbed-block">
-<p>Raw sensor readings are ingested into compressed hypertables with background continuous aggregate views (<code>points_1m</code> and <code>points_1h</code>). Queries across months of data return in milliseconds.</p>
-</div>
-<div class="tabbed-block">
-<p>A native Flutter client for Linux Desktop, macOS, Windows, Android, iOS, and Web featuring real-time MQTT streaming, dynamic metric cards, and responsive time-series charts powered by <code>fl_chart</code>.</p>
-</div>
-</div>
-</div>
-<hr />
-<h2 id="system-architecture-at-a-glance">System Architecture at a Glance<a class="headerlink" href="#system-architecture-at-a-glance" title="Permanent link">&para;</a></h2>
-<pre class="mermaid"><code>flowchart TD
-    %% ==========================================
-    %% TIER 1: CLIENTS
-    %% ==========================================
-    subgraph CLIENTS ["1. EDGE CLIENTS &amp; HARDWARE"]
-        direction LR
-        ESP["&lt;b&gt;ESP32 / IoT Hardware Nodes&lt;/b&gt;&lt;br/&gt;&lt;i&gt;Sensors, MicroPython, Arduino C++&lt;/i&gt;&lt;br/&gt;&lt;code&gt;Topic: channels/{id}/data&lt;/code&gt;"]
-        APP["&lt;b&gt;Flutter Cross-Platform Application&lt;/b&gt;&lt;br/&gt;&lt;i&gt;Desktop • Mobile • Web&lt;/i&gt;&lt;br/&gt;&lt;code&gt;Live MQTT Stream &amp; REST Dashboard&lt;/code&gt;"]
-    end
-
-    %% ==========================================
-    %% TIER 2: EDGE PROXY &amp; INGRESS
-    %% ==========================================
-    subgraph EDGE ["2. EDGE INGRESS &amp; TLS TERMINATION"]
-        TRAEFIK["&lt;b&gt;Traefik v3 Reverse Proxy&lt;/b&gt;&lt;br/&gt;&lt;i&gt;Automated Let's Encrypt TLS Certificates&lt;/i&gt;&lt;br/&gt;&lt;code&gt;Ports: :8883 (MQTTS) • :443 (HTTPS/WSS) • :80 (ACME)&lt;/code&gt;"]
-    end
-
-    %% ==========================================
-    %% TIER 3: MESSAGING &amp; ROUTING
-    %% ==========================================
-    subgraph MESSAGING ["3. MQTT MESSAGING FABRIC"]
-        MOSQ["&lt;b&gt;Eclipse Mosquitto Broker&lt;/b&gt;&lt;br/&gt;&lt;i&gt;High-concurrency pub/sub with mosquitto-go-auth&lt;/i&gt;&lt;br/&gt;&lt;code&gt;Dynamic PostgreSQL ACLs &amp; In-Memory TTL Caching&lt;/code&gt;"]
-    end
-
-    %% ==========================================
-    %% TIER 4: BACKEND PROCESSING &amp; STORAGE
-    %% ==========================================
-    subgraph PROCESSING ["4. INGESTION &amp; RELATIONAL STORAGE"]
-        direction LR
-        BRIDGE["&lt;b&gt;Python Ingestion Bridge&lt;/b&gt;&lt;br/&gt;&lt;i&gt;aiomqtt + orjson&lt;/i&gt;&lt;br/&gt;&lt;code&gt;$share/ingest/channels/+/data&lt;/code&gt;&lt;br/&gt;&lt;i&gt;Micro-batch COPY Buffer&lt;/i&gt;"]
-        API["&lt;b&gt;FastAPI REST Gateway&lt;/b&gt;&lt;br/&gt;&lt;i&gt;JWT &amp; Argon2id Auth&lt;/i&gt;&lt;br/&gt;&lt;i&gt;Auto-downsampling Engine&lt;/i&gt;&lt;br/&gt;&lt;i&gt;Direct MQTT Forwarder&lt;/i&gt;"]
-        DB[("&lt;b&gt;PostgreSQL 16 + TimescaleDB&lt;/b&gt;&lt;br/&gt;&lt;i&gt;Relational Metadata (app)&lt;/i&gt;&lt;br/&gt;&lt;i&gt;Hypertables (telemetry.points)&lt;/i&gt;&lt;br/&gt;&lt;i&gt;Continuous Aggregates (1m / 1h)&lt;/i&gt;")]
-    end
-
-    %% Client traffic
-    ESP ==&gt;|"MQTTS :8883 (Publish Telemetry)"| TRAEFIK
-    APP ==&gt;|"MQTTS :8883 / WSS :443 (Live Stream)"| TRAEFIK
-    APP ==&gt;|"HTTPS :443 (REST API &amp; Auth)"| TRAEFIK
-
-    %% Ingress to Broker &amp; API
-    TRAEFIK ==&gt;|"TCP :1883"| MOSQ
-    TRAEFIK ==&gt;|"HTTP :8000"| API
-
-    %% Internal messaging
-    MOSQ &lt;===&gt;|"Bcrypt Auth &amp; Topic ACL Queries"| DB
-    MOSQ ==&gt;|"Shared Load-Balanced Ingestion"| BRIDGE
-    API -.-&gt;|"Forward HTTP Writes"| MOSQ
-
-    %% Storage writes &amp; queries
-    BRIDGE ===&gt;|"Binary COPY Flush (2,000 pts / 500ms)"| DB
-    API &lt;===&gt;|"Metadata CRUD &amp; Analytical Rollups"| DB
-
-    %% Custom High-Visibility Styling
-    classDef clientStyle fill:#1e293b,stroke:#38bdf8,stroke-width:3px,color:#ffffff;
-    classDef edgeStyle fill:#0f172a,stroke:#06b6d4,stroke-width:3px,color:#ffffff;
-    classDef brokerStyle fill:#1e1e24,stroke:#f59e0b,stroke-width:3px,color:#ffffff;
-    classDef serviceStyle fill:#1e1b4b,stroke:#a855f7,stroke-width:3px,color:#ffffff;
-    classDef dbStyle fill:#064e3b,stroke:#10b981,stroke-width:3px,color:#ffffff;
-
-    class ESP,APP clientStyle;
-    class TRAEFIK edgeStyle;
-    class MOSQ brokerStyle;
-    class BRIDGE,API serviceStyle;
-    class DB dbStyle;</code></pre>
-<hr />
-<h2 id="technology-stack">Technology Stack<a class="headerlink" href="#technology-stack" title="Permanent link">&para;</a></h2>
+<h2 id="why-thinglarp">Why ThingLarp?<a class="headerlink" href="#why-thinglarp" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th style="text-align: left;">Layer</th>
-<th style="text-align: left;">Component</th>
-<th style="text-align: left;">Description</th>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">Legacy IoT Platforms</th>
+<th style="text-align: left;">ThingLarp</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td style="text-align: left;"><strong>Edge Proxy</strong></td>
-<td style="text-align: left;"><a href="services/traefik/">Traefik v3</a></td>
-<td style="text-align: left;">Reverse proxy terminating TLS, automated Let's Encrypt certificates, TCP/HTTP routing.</td>
+<td style="text-align: left;"><strong>Update Rate Limit</strong></td>
+<td style="text-align: left;">1 update every 15–60 seconds</td>
+<td style="text-align: left;"><strong>Zero artificial rate limits</strong> (stream up to 100Hz)</td>
 </tr>
 <tr>
-<td style="text-align: left;"><strong>MQTT Broker</strong></td>
-<td style="text-align: left;"><a href="services/mosquitto/">Eclipse Mosquitto</a></td>
-<td style="text-align: left;">High-concurrency MQTT broker with <code>mosquitto-go-auth</code> plugin validating credentials via Postgres.</td>
+<td style="text-align: left;"><strong>Field Constraints</strong></td>
+<td style="text-align: left;">Rigid 8 fields (<code>field1</code>...<code>field8</code>)</td>
+<td style="text-align: left;"><strong>Unlimited dynamic JSON fields</strong> (auto-discovered)</td>
 </tr>
 <tr>
-<td style="text-align: left;"><strong>Ingestion Engine</strong></td>
-<td style="text-align: left;"><a href="services/bridge/">Python Bridge</a></td>
-<td style="text-align: left;">High-throughput asynchronous daemon using <code>aiomqtt</code>, <code>orjson</code>, and PostgreSQL <code>COPY</code> batching.</td>
+<td style="text-align: left;"><strong>Visualizations</strong></td>
+<td style="text-align: left;">Static charts</td>
+<td style="text-align: left;"><strong>Real-time live streaming</strong> (QoS 1 WebSockets / MQTT)</td>
 </tr>
 <tr>
-<td style="text-align: left;"><strong>Database</strong></td>
-<td style="text-align: left;"><a href="architecture/database/">TimescaleDB</a></td>
-<td style="text-align: left;">PostgreSQL 16 engine with automated chunk compression and 1-minute / 1-hour continuous rollups.</td>
+<td style="text-align: left;"><strong>Public Sharing</strong></td>
+<td style="text-align: left;">Complex or locked</td>
+<td style="text-align: left;"><strong>1-click public share links</strong> for any browser</td>
 </tr>
 <tr>
-<td style="text-align: left;"><strong>REST API</strong></td>
-<td style="text-align: left;"><a href="services/api/">FastAPI</a></td>
-<td style="text-align: left;">Asynchronous REST gateway for user authentication (JWT/Argon2id), channel management, and telemetry queries.</td>
-</tr>
-<tr>
-<td style="text-align: left;"><strong>Client App</strong></td>
-<td style="text-align: left;"><a href="client/flutter/">Flutter 3.x</a></td>
-<td style="text-align: left;">Cross-platform frontend with reactive state management (<code>provider</code>) and interactive charting (<code>fl_chart</code>).</td>
+<td style="text-align: left;"><strong>Downlink Control</strong></td>
+<td style="text-align: left;">Paid addon</td>
+<td style="text-align: left;"><strong>Built-in hardware commands</strong></td>
 </tr>
 </tbody>
 </table>
 <hr />
-<h2 id="quick-navigation">Quick Navigation<a class="headerlink" href="#quick-navigation" title="Permanent link">&para;</a></h2>
+<h2 id="3-minute-quickstart">3-Minute Quickstart<a class="headerlink" href="#3-minute-quickstart" title="Permanent link">&para;</a></h2>
+<p>Getting sensor readings streaming into ThingLarp takes 3 simple steps:</p>
+<h3 id="1-create-a-channel">1. Create a Channel<a class="headerlink" href="#1-create-a-channel" title="Permanent link">&para;</a></h3>
+<p>Open the <a href="https://thinglarp.iimarky123.io.vn/app/">ThingLarp Web Dashboard</a>, sign in, and click <strong>+ New Channel</strong>. Give it a name like <em>"Weather Station"</em>.</p>
+<h3 id="2-get-an-api-key-or-device-credentials">2. Get an API Key or Device Credentials<a class="headerlink" href="#2-get-an-api-key-or-device-credentials" title="Permanent link">&para;</a></h3>
 <ul>
-<li><a href="guides/getting_started/">Getting Started Guide</a> — Deploy the entire platform via Docker Compose in under 5 minutes.</li>
-<li><a href="architecture/overview/">Architecture Deep Dive</a> — Comprehensive technical design of the backend microservices.</li>
-<li><a href="guides/hardware_provisioning/">Hardware Provisioning</a> — Example code for ESP32 (Arduino / MicroPython) and Raspberry Pi.</li>
-<li><a href="reference/api_reference/">REST API Reference</a> — Complete endpoint schemas, authentication, and responses.</li>
-<li><a href="client/flutter/">Flutter Client Integration</a> — Building and running the cross-platform application.</li>
+<li><strong>For HTTP REST</strong>: Open your channel, go to the <strong>API Keys</strong> tab, and copy your channel's API key.</li>
+<li><strong>For MQTT</strong>: Go to the <strong>Devices</strong> tab, click <strong>Provision Device</strong>, and save the generated MQTT username (<code>d_xxxx</code>) and password.</li>
+</ul>
+<h3 id="3-send-telemetry">3. Send Telemetry<a class="headerlink" href="#3-send-telemetry" title="Permanent link">&para;</a></h3>
+<p>Send a JSON payload with your sensor readings:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:3"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">cURL (HTTP)</label><label for="__tabbed_1_2">Python (HTTP)</label><label for="__tabbed_1_3">MQTT (CLI)</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://api.iimarky123.io.vn/channels/YOUR_CHANNEL_ID/data<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">"X-API-Key: YOUR_API_KEY"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">"Content-Type: application/json"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"temperature": 25.4, "humidity": 62.1, "pressure_hpa": 1013.2}'</span>
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="s2">"https://api.iimarky123.io.vn/channels/YOUR_CHANNEL_ID/data"</span><span class="p">,</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">"X-API-Key"</span><span class="p">:</span> <span class="s2">"YOUR_API_KEY"</span><span class="p">},</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">"temperature"</span><span class="p">:</span> <span class="mf">25.4</span><span class="p">,</span> <span class="s2">"humidity"</span><span class="p">:</span> <span class="mf">62.1</span><span class="p">,</span> <span class="s2">"pressure_hpa"</span><span class="p">:</span> <span class="mf">1013.2</span><span class="p">}</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="p">)</span>
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>mosquitto_pub<span class="w"> </span>-h<span class="w"> </span>mqtt.iimarky123.io.vn<span class="w"> </span>-p<span class="w"> </span><span class="m">8883</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>-u<span class="w"> </span><span class="s2">"YOUR_DEVICE_USER"</span><span class="w"> </span>-P<span class="w"> </span><span class="s2">"YOUR_DEVICE_PASS"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>-t<span class="w"> </span><span class="s2">"channels/YOUR_CHANNEL_ID/data"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span>-m<span class="w"> </span><span class="s1">'{"temperature": 25.4, "humidity": 62.1}'</span>
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<hr />
+<h2 id="explore-the-guides">Explore the Guides<a class="headerlink" href="#explore-the-guides" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong><a href="getting_started/">Quickstart &amp; First Steps</a></strong>: Account setup, channel management, and field options.</li>
+<li><strong><a href="dashboard/">Web Dashboard</a></strong>: Real-time charts, widget customization, and CSV export.</li>
+<li><strong><a href="public_sharing/">Public Link Sharing</a></strong>: Sharing live telemetry with anyone on the web.</li>
+<li><strong><a href="sending_data_http/">HTTP Ingestion</a></strong>: Complete guide to sending data using HTTP REST API.</li>
+<li><strong><a href="sending_data_mqtt/">MQTT Ingestion</a></strong>: High-speed telemetry streaming with MQTT.</li>
+<li><strong><a href="hardware/esp32/">Hardware Examples</a></strong>: Arduino C++ (ESP32/ESP8266), MicroPython, and Python code.</li>
+<li><strong><a href="reference/api_reference/">REST API Reference</a></strong>: Detailed endpoints, queries, and responses.</li>
 </ul>
 
 
