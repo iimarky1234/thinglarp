@@ -587,68 +587,76 @@ res.close()''';
   // TAB 3: Read Data (HTTP Query)
   // ===========================================================================
   Widget _buildHttpQueryTab() {
-    final curlLatest = '''# 1. Fetch Latest Telemetry Snapshot
-curl -X GET "$_apiBase/channels/$_channelId/latest" \\
+    final curlHistoryFeeds = '''# 1. Fetch Channel History (specify exact number of data entries you want)
+curl -X GET "$_apiBase/channels/$_channelId/history?limit=10&order=desc" \\
+  -H "X-API-Key: $_keyPlaceholder"
+
+# 2. Fetch Single Latest Reading (limit=1)
+curl -X GET "$_apiBase/channels/$_channelId/history?limit=1" \\
   -H "X-API-Key: $_keyPlaceholder"''';
 
-    final curlHistory = '''# 2. Query Historical Time-Series (with auto-downsampling)
+    final curlTimeSeries = '''# 3. Query Time-Series Data (with auto-downsampling & optional limit)
 # Supported resolutions: auto, raw, 1m, 1h
-curl -X GET "$_apiBase/channels/$_channelId/data?resolution=1m" \\
+curl -X GET "$_apiBase/channels/$_channelId/data?resolution=1m&limit=100" \\
   -H "X-API-Key: $_keyPlaceholder"''';
 
     final pythonQuery = '''import requests
 
-URL = "$_apiBase/channels/$_channelId/data"
+# Query Channel History (fetch the exact number of entries you want)
+URL = "$_apiBase/channels/$_channelId/history"
 API_KEY = "$_keyPlaceholder"
 
 headers = {"X-API-Key": API_KEY}
 params = {
-    "resolution": "auto",       # 'raw', '1m', '1h', or 'auto'
-    "fields": "temperature,humidity" # Optional field filter
+    "limit": 10,       # Fetch last 10 entries (max 1000)
+    "order": "desc"    # 'desc' (newest first) or 'asc' (oldest first)
 }
 
 res = requests.get(URL, headers=headers, params=params)
 data = res.json()
 
-print(f"Channel ID: {data['channel_id']}, Resolution: {data['resolution']}")
-for point in data.get("points", []):
-    print(f"[{point['time']}] {point['field']} = {point['value']} (min: {point.get('min')}, max: {point.get('max')})")''';
+print(f"Channel ID: {data['channel_id']}, Total Retrieved: {data['count']}")
+for feed in data.get("feeds", []):
+    print(f"[{feed['time']}] -> {feed['payload']}")''';
 
-    final jsQuery = '''const url = "$_apiBase/channels/$_channelId/data?resolution=auto";
+    final jsQuery = '''const url = "$_apiBase/channels/$_channelId/history?limit=10&order=desc";
 const apiKey = "$_keyPlaceholder";
 
-async function fetchTelemetry() {
+async function fetchHistory() {
   const res = await fetch(url, {
     headers: { "X-API-Key": apiKey }
   });
   const data = await res.json();
-  console.log("Historical points:", data.points);
+  console.log(`Fetched \${data.count} entries:`, data.feeds);
+  data.feeds.forEach(f => {
+    console.log(`[\${f.time}]`, f.payload);
+  });
 }
 
-fetchTelemetry();''';
+fetchHistory();''';
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         _buildEndpointBanner(
           method: 'GET',
-          path: '/channels/$_channelId/latest',
-          description: 'Fetch the most recent complete JSON message sent to this channel.',
+          path: '/channels/$_channelId/history?limit={count}&order={desc|asc}',
+          description: 'Fetch channel history with full control over the number of records returned (default: 20, max: 1000).',
         ),
         const SizedBox(height: 14),
-        _buildCodeSection('cURL (Get Latest Snapshot)', curlLatest),
+        _buildCodeSection('cURL (Fetch Channel History / Feeds)', curlHistoryFeeds),
+        const SizedBox(height: 16),
+        _buildCodeSection('Python (Fetch History & Iterate Records)', pythonQuery),
+        const SizedBox(height: 16),
+        _buildCodeSection('JavaScript (Web / Node)', jsQuery),
         const SizedBox(height: 20),
         _buildEndpointBanner(
           method: 'GET',
-          path: '/channels/$_channelId/data?resolution={auto|raw|1m|1h}',
-          description: 'Fetch historical time-series points powered by TimescaleDB hypertables.',
+          path: '/channels/$_channelId/data?resolution={auto|raw|1m|1h}&limit={n}',
+          description: 'Fetch historical time-series points grouped by field, powered by TimescaleDB hypertables.',
         ),
         const SizedBox(height: 14),
-        _buildCodeSection('cURL (Query Time-Series)', curlHistory),
-        const SizedBox(height: 16),
-        _buildCodeSection('Python (Query & Parse Points)', pythonQuery),
-        const SizedBox(height: 16),
-        _buildCodeSection('JavaScript (Web / Node)', jsQuery),
+        _buildCodeSection('cURL (Query Time-Series Points)', curlTimeSeries),
       ],
     );
   }

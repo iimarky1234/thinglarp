@@ -296,6 +296,37 @@ class ApiService {
     throw Exception('Failed to get latest telemetry');
   }
 
+  Future<Map<String, dynamic>> getChannelHistory({
+    required int channelId,
+    int limit = 20,
+    String order = 'desc',
+    DateTime? start,
+    DateTime? end,
+    String? apiKey,
+  }) async {
+    final queryParams = <String, String>{
+      'limit': limit.toString(),
+      'order': order,
+      if (start != null) 'start': start.toIso8601String(),
+      if (end != null) 'end': end.toIso8601String(),
+    };
+    final uri = Uri.parse('${config.apiUrl}/channels/$channelId/history')
+        .replace(queryParameters: queryParams);
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      if (apiKey != null && apiKey.isNotEmpty)
+        'X-API-Key': apiKey
+      else if (accessToken != null)
+        'Authorization': 'Bearer $accessToken',
+    };
+    final res = await http.get(uri, headers: headers);
+    if (res.statusCode == 200) {
+      return jsonDecode(res.body) as Map<String, dynamic>;
+    }
+    throw Exception('Failed to load channel history: ${res.body}');
+  }
+
+
   Future<Map<String, dynamic>> postTelemetry({
     required int channelId,
     required Map<String, dynamic> data,

@@ -164,3 +164,27 @@ async def test_admin_settings_toggle(mock_db):
         assert res.status_code == 200
         assert res.json()["registration_enabled"] is False
 
+@pytest.mark.asyncio
+async def test_channel_history(mock_db):
+    token = create_access_token(user_id=1, username="testuser")
+    mock_db.fetchrow.side_effect = [
+        {"id": 1, "username": "testuser", "is_active": True, "is_admin": False},  # Auth check
+        {"id": 1, "owner_id": 1, "is_public": False},  # Channel lookup
+    ]
+    mock_db.fetch.return_value = [
+        {"time": datetime.now(timezone.utc), "payload": '{"temp": 25.5, "humidity": 60}'},
+        {"time": datetime.now(timezone.utc), "payload": '{"temp": 24.8, "humidity": 62}'},
+    ]
+
+    headers = {"Authorization": f"Bearer {token}"}
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.get("/channels/1/history?limit=10&order=desc", headers=headers)
+        assert res.status_code == 200
+        data = res.json()
+        assert data["channel_id"] == 1
+        assert data["limit"] == 10
+        assert data["count"] == 2
+        assert len(data["feeds"]) == 2
+        assert data["feeds"][0]["payload"]["temp"] == 25.5
+
+

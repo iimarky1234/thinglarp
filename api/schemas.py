@@ -202,3 +202,15 @@ class LatestTelemetryOut(BaseModel):
     channel_id: int
     timestamp: datetime | None
     fields: dict[str, Any]
+
+class TelemetryFeedItem(BaseModel):
+    time: datetime
+    payload: dict[str, Any]
+
+class ChannelHistoryOut(BaseModel):
+    channel_id: int
+    count: int
+    limit: int
+    order: str
+    feeds: list[TelemetryFeedItem]
+

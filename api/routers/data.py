@@ -15,6 +15,8 @@ from schemas import (
     ChannelTelemetryOut,
     LatestTelemetryOut,
     TelemetryPoint,
+    ChannelHistoryOut,
+    TelemetryFeedItem,
     CommandDispatch,
     CommandDispatchOut,
     ImportResultOut,
@@ -107,6 +109,7 @@ async def query_telemetry(
     start: datetime | None = Query(None, description="Start time (defaults to -24h)"),
     end: datetime | None = Query(None, description="End time (defaults to now)"),
     resolution: str = Query("auto", pattern=r"^(auto|raw|1m|1h)$"),
+    limit: int | None = Query(None, ge=1, le=5000, description="Maximum points to return per field"),
     x_api_key: Annotated[str | None, Header()] = None,
     current_user: Annotated[CurrentUser | None, Depends(get_optional_current_user)] = None,
 ):
@@ -159,7 +162,8 @@ async def query_telemetry(
         rows = await db.fetch(query, channel_id, field_ids, start_time, end_time)
         for r in rows:
             key = field_map[r["field_id"]]
-            result_fields[key].append(TelemetryPoint(time=r["time"], value=r["value"]))
+            if limit is None or len(result_fields[key]) < limit:
+                result_fields[key].append(TelemetryPoint(time=r["time"], value=r["value"]))
     elif chosen_resolution == "1m":
         query = """
             SELECT bucket AS time, field_id, avg_v AS value, min_v, max_v
@@ -170,9 +174,10 @@ async def query_telemetry(
         rows = await db.fetch(query, channel_id, field_ids, start_time, end_time)
         for r in rows:
             key = field_map[r["field_id"]]
-            result_fields[key].append(
-                TelemetryPoint(time=r["time"], value=r["value"], min=r["min_v"], max=r["max_v"])
-            )
+            if limit is None or len(result_fields[key]) < limit:
+                result_fields[key].append(
+                    TelemetryPoint(time=r["time"], value=r["value"], min=r["min_v"], max=r["max_v"])
+                )
     else: # 1h
         query = """
             SELECT bucket_1h AS time, field_id, avg_v AS value, min_v, max_v
@@ -183,9 +188,10 @@ async def query_telemetry(
         rows = await db.fetch(query, channel_id, field_ids, start_time, end_time)
         for r in rows:
             key = field_map[r["field_id"]]
-            result_fields[key].append(
-                TelemetryPoint(time=r["time"], value=r["value"], min=r["min_v"], max=r["max_v"])
-            )
+            if limit is None or len(result_fields[key]) < limit:
+                result_fields[key].append(
+                    TelemetryPoint(time=r["time"], value=r["value"], min=r["min_v"], max=r["max_v"])
+                )
 
     return ChannelTelemetryOut(
         channel_id=channel_id,
@@ -226,6 +232,64 @@ async def get_latest_telemetry(
         timestamp=row["time"],
         fields=fields_dict,
     )
+
+
+@router.get("/history", response_model=ChannelHistoryOut)
+async def get_channel_history(
+    channel_id: int,
+    db: Annotated[asyncpg.Connection, Depends(get_db)],
+    limit: int = Query(20, ge=1, le=1000, description="Number of recent records to fetch (default: 20, max: 1000)"),
+    order: str = Query("desc", pattern=r"^(asc|desc)$", description="Sort order: desc (newest first) or asc (oldest first)"),
+    start: datetime | None = Query(None, description="Start timestamp filter"),
+    end: datetime | None = Query(None, description="End timestamp filter"),
+    x_api_key: Annotated[str | None, Header()] = None,
+    current_user: Annotated[CurrentUser | None, Depends(get_optional_current_user)] = None,
+):
+    """
+    Retrieve historical telemetry data packets with a configurable limit.
+    Enables fetching the exact count of recent or windowed data packets requested.
+    """
+    await authorize_channel_access(channel_id, "read", x_api_key, current_user, db)
+
+    conditions = ["channel_id = $1"]
+    params: list[Any] = [channel_id, limit]
+    param_idx = 3
+
+    if start:
+        conditions.append(f"time >= ${param_idx}")
+        params.append(start)
+        param_idx += 1
+    if end:
+        conditions.append(f"time <= ${param_idx}")
+        params.append(end)
+        param_idx += 1
+
+    where_clause = " AND ".join(conditions)
+    sort_dir = "DESC" if order.lower() == "desc" else "ASC"
+
+    query = f"""
+        SELECT time, payload
+        FROM telemetry.messages
+        WHERE {where_clause}
+        ORDER BY time {sort_dir}
+        LIMIT $2;
+    """
+    rows = await db.fetch(query, *params)
+
+    feeds = []
+    for r in rows:
+        raw_payload = r["payload"]
+        payload_dict = orjson.loads(raw_payload) if isinstance(raw_payload, str) else raw_payload
+        feeds.append(TelemetryFeedItem(time=r["time"], payload=payload_dict))
+
+    return ChannelHistoryOut(
+        channel_id=channel_id,
+        count=len(feeds),
+        limit=limit,
+        order=order.lower(),
+        feeds=feeds,
+    )
+
 
 
 @router.delete("/data", status_code=status.HTTP_200_OK)

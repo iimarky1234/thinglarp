@@ -306,6 +306,69 @@ POST /mqtt/session
 
 ## Telemetry Data Endpoints
 
+### Fetch Channel History / Feeds
+```http
+GET /channels/{channel_id}/history?limit=20&order=desc
+X-API-Key: tl_read_xxxxxxxxxxxxxxxxxxxx
+```
+Fetches historical telemetry data packets with full control over the number of records returned.
+Can also authenticate via `Authorization: Bearer <jwt_access_token>` or open access for public channels.
+
+**Query Parameters:**
+- `limit` (optional integer, default `20`, min `1`, max `1000`): Maximum number of recent data packets to return.
+- `order` (optional string, `desc` [newest first] or `asc` [oldest first], default `desc`).
+- `start` (optional ISO 8601 timestamp): Filter packets starting from this timestamp.
+- `end` (optional ISO 8601 timestamp): Filter packets up to this timestamp.
+
+**Response (200 OK):**
+```json
+{
+  "channel_id": 1,
+  "count": 2,
+  "limit": 20,
+  "order": "desc",
+  "feeds": [
+    {
+      "time": "2026-11-12T17:15:00.120Z",
+      "payload": {
+        "temperature": 25.4,
+        "humidity": 61.2
+      }
+    },
+    {
+      "time": "2026-11-12T17:14:00.100Z",
+      "payload": {
+        "temperature": 25.1,
+        "humidity": 61.5
+      }
+    }
+  ]
+}
+```
+
+---
+
+### Fetch Latest Snapshot
+```http
+GET /channels/{channel_id}/latest
+X-API-Key: tl_read_xxxxxxxxxxxxxxxxxxxx
+```
+Retrieves the single latest complete JSON packet recorded on the channel.
+
+**Response (200 OK):**
+```json
+{
+  "channel_id": 1,
+  "timestamp": "2026-11-12T17:15:00.120Z",
+  "fields": {
+    "temperature": 25.4,
+    "humidity": 61.2
+  }
+}
+```
+
+---
+
 ### Query Telemetry Series
 ```http
 GET /channels/{channel_id}/data?resolution=auto&fields=temperature,humidity&start=2026-11-11T00:00:00Z

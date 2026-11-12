@@ -202,11 +202,18 @@ On success, the API returns HTTP `202 Accepted`:
 
 ## 📊 Tutorial 2: Querying Telemetry (HTTP GET)
 
-### 1. Fetch Latest Snapshot
-Retrieve the single most recent JSON packet received by the channel:
+### 1. Fetch Channel History / Feeds (Configurable Limit)
+Retrieve the exact number of recent telemetry packets you want using the `limit` query parameter (default: 20, max: 1000):
 
 ```bash
-curl -X GET "https://api.iimarky123.io.vn/channels/1/latest" \
+# Fetch the last 10 data packets (newest first)
+curl -X GET "https://api.iimarky123.io.vn/channels/1/history?limit=10&order=desc" \
+  -H "X-API-Key: tl_read_YOUR_KEY_HERE"
+```
+
+To fetch only the single latest reading, simply pass `limit=1` (or use `/latest`):
+```bash
+curl -X GET "https://api.iimarky123.io.vn/channels/1/history?limit=1" \
   -H "X-API-Key: tl_read_YOUR_KEY_HERE"
 ```
 
@@ -214,14 +221,30 @@ Response:
 ```json
 {
   "channel_id": 1,
-  "time": "2026-11-12T08:35:10.123456Z",
-  "payload": {
-    "temperature": 24.5,
-    "humidity": 58.2,
-    "status": "online"
-  }
+  "count": 2,
+  "limit": 10,
+  "order": "desc",
+  "feeds": [
+    {
+      "time": "2026-11-12T17:10:05.123456Z",
+      "payload": {
+        "temperature": 25.4,
+        "humidity": 61.2,
+        "status": "online"
+      }
+    },
+    {
+      "time": "2026-11-12T17:09:05.100234Z",
+      "payload": {
+        "temperature": 25.1,
+        "humidity": 61.5,
+        "status": "online"
+      }
+    }
+  ]
 }
 ```
+
 
 ---
 
