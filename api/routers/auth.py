@@ -35,12 +35,12 @@ async def register(payload: UserRegister, db: Annotated[asyncpg.Connection, Depe
         """
         INSERT INTO app.users (username, password_hash)
         VALUES ($1, $2)
-        RETURNING id, username, created_at;
+        RETURNING id, username, is_admin, created_at;
         """,
         payload.username,
         pwd_hash,
     )
-    return UserOut(id=row["id"], username=row["username"], created_at=row["created_at"])
+    return UserOut(id=row["id"], username=row["username"], is_admin=row["is_admin"], created_at=row["created_at"])
 
 @router.post("/login", response_model=TokenResponse)
 async def login(payload: UserLogin, db: Annotated[asyncpg.Connection, Depends(get_db)]):
@@ -117,5 +117,5 @@ async def get_profile(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     db: Annotated[asyncpg.Connection, Depends(get_db)],
 ):
-    row = await db.fetchrow("SELECT id, username, created_at FROM app.users WHERE id = $1", current_user.id)
-    return UserOut(id=row["id"], username=row["username"], created_at=row["created_at"])
+    row = await db.fetchrow("SELECT id, username, is_admin, created_at FROM app.users WHERE id = $1", current_user.id)
+    return UserOut(id=row["id"], username=row["username"], is_admin=row["is_admin"], created_at=row["created_at"])

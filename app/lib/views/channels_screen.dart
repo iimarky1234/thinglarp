@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../providers/channel_provider.dart';
 import 'channel_detail_screen.dart';
 import 'settings_screen.dart';
+import 'admin_users_screen.dart';
 
 class ChannelsScreen extends StatefulWidget {
   const ChannelsScreen({super.key});
@@ -100,6 +101,17 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
       appBar: AppBar(
         title: const Text('My Channels'),
         actions: [
+          if (auth.currentUser?.isAdmin == true)
+            IconButton(
+              icon: const Icon(Icons.admin_panel_settings, color: Colors.amberAccent),
+              tooltip: 'User Administration',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AdminUsersScreen()),
+                );
+              },
+            ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {

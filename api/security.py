@@ -62,9 +62,10 @@ def create_refresh_token() -> str:
 # FastAPI Current User Dependency
 # -----------------------------------------------------------------------------
 class CurrentUser:
-    def __init__(self, id: int, username: str):
+    def __init__(self, id: int, username: str, is_admin: bool = False):
         self.id = id
         self.username = username
+        self.is_admin = is_admin
 
 async def get_current_user(
     token: Annotated[str | None, Depends(oauth2_scheme)],
@@ -95,7 +96,7 @@ async def get_current_user(
         )
 
     row = await db.fetchrow(
-        "SELECT id, username, is_active FROM app.users WHERE id = $1",
+        "SELECT id, username, is_active, is_admin FROM app.users WHERE id = $1",
         user_id,
     )
     if not row or not row["is_active"]:
@@ -104,7 +105,17 @@ async def get_current_user(
             detail="User not found or inactive",
         )
 
-    return CurrentUser(id=row["id"], username=row["username"])
+    return CurrentUser(id=row["id"], username=row["username"], is_admin=row["is_admin"])
+
+async def require_admin(
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+) -> CurrentUser:
+    if not user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrator access required",
+        )
+    return user
 
 async def get_optional_current_user(
     token: Annotated[str | None, Depends(oauth2_scheme)],

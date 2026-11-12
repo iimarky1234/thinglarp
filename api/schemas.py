@@ -27,7 +27,37 @@ class RefreshTokenRequest(BaseModel):
 class UserOut(BaseModel):
     id: int
     username: str
+    is_admin: bool = False
     created_at: datetime
+
+# -----------------------------------------------------------------------------
+# Admin Schemas
+# -----------------------------------------------------------------------------
+class AdminUserOut(BaseModel):
+    id: int
+    username: str
+    is_active: bool
+    is_admin: bool
+    created_at: datetime
+    channel_count: int = 0
+    device_count: int = 0
+
+class AdminUserCreate(BaseModel):
+    username: str = Field(..., min_length=3, max_length=32, pattern=r"^[a-zA-Z0-9_.-]+$")
+    password: str = Field(..., min_length=6, max_length=128)
+    is_admin: bool = False
+
+class AdminUserUpdate(BaseModel):
+    is_active: bool | None = None
+    is_admin: bool | None = None
+    password: str | None = Field(None, min_length=6, max_length=128)
+
+class AdminStats(BaseModel):
+    total_users: int
+    active_users: int
+    total_channels: int
+    total_devices: int
+    total_points: int
 
 # -----------------------------------------------------------------------------
 # MQTT Session Schemas

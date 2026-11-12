@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from database import init_db, close_db, is_db_connected
 from mqtt_client import publisher
-from routers import auth, mqtt, channels, devices, keys, data
+from routers import auth, mqtt, channels, devices, keys, data, admin
 
 logging.basicConfig(
     level=logging.INFO,
@@ -60,6 +60,7 @@ app.include_router(channels.router)
 app.include_router(devices.router)
 app.include_router(keys.router)
 app.include_router(data.router)
+app.include_router(admin.router)
 
 @app.get("/health", tags=["Health"])
 async def health_check():

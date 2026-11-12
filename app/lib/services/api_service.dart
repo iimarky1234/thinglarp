@@ -237,4 +237,76 @@ class ApiService {
     }
     throw Exception('Failed to get latest telemetry');
   }
+
+  // ---------------------------------------------------------------------------
+  // Admin Methods
+  // ---------------------------------------------------------------------------
+  Future<List<AdminUser>> getAdminUsers() async {
+    final res = await http.get(
+      Uri.parse('${config.apiUrl}/admin/users'),
+      headers: _headers,
+    );
+    if (res.statusCode == 200) {
+      final List data = jsonDecode(res.body);
+      return data.map((x) => AdminUser.fromJson(x as Map<String, dynamic>)).toList();
+    }
+    throw Exception('Failed to load users: ${res.body}');
+  }
+
+  Future<AdminStats> getAdminStats() async {
+    final res = await http.get(
+      Uri.parse('${config.apiUrl}/admin/stats'),
+      headers: _headers,
+    );
+    if (res.statusCode == 200) {
+      return AdminStats.fromJson(jsonDecode(res.body));
+    }
+    throw Exception('Failed to load admin stats: ${res.body}');
+  }
+
+  Future<AdminUser> createAdminUser(String username, String password, {bool isAdmin = false}) async {
+    final res = await http.post(
+      Uri.parse('${config.apiUrl}/admin/users'),
+      headers: _headers,
+      body: jsonEncode({
+        'username': username,
+        'password': password,
+        'is_admin': isAdmin,
+      }),
+    );
+    if (res.statusCode == 201) {
+      return AdminUser.fromJson(jsonDecode(res.body));
+    }
+    final err = jsonDecode(res.body)['detail'] ?? 'Failed to create user';
+    throw Exception(err);
+  }
+
+  Future<AdminUser> updateAdminUser(int userId, {bool? isActive, bool? isAdmin, String? password}) async {
+    final body = <String, dynamic>{};
+    if (isActive != null) body['is_active'] = isActive;
+    if (isAdmin != null) body['is_admin'] = isAdmin;
+    if (password != null) body['password'] = password;
+
+    final res = await http.patch(
+      Uri.parse('${config.apiUrl}/admin/users/$userId'),
+      headers: _headers,
+      body: jsonEncode(body),
+    );
+    if (res.statusCode == 200) {
+      return AdminUser.fromJson(jsonDecode(res.body));
+    }
+    final err = jsonDecode(res.body)['detail'] ?? 'Failed to update user';
+    throw Exception(err);
+  }
+
+  Future<void> deleteAdminUser(int userId) async {
+    final res = await http.delete(
+      Uri.parse('${config.apiUrl}/admin/users/$userId'),
+      headers: _headers,
+    );
+    if (res.statusCode != 204) {
+      final err = jsonDecode(res.body)['detail'] ?? 'Failed to delete user';
+      throw Exception(err);
+    }
+  }
 }

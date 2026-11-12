@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS app.users (
                   CHECK (username ~ '^[a-zA-Z0-9_.-]{3,32}$'),
     password_hash TEXT NOT NULL,               -- Argon2id (API verification)
     is_active     BOOLEAN NOT NULL DEFAULT TRUE,
+    is_admin      BOOLEAN NOT NULL DEFAULT FALSE,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
