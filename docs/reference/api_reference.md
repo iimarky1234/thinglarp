@@ -137,7 +137,8 @@ POST /channels/{channel_id}/devices
 **Request Body:**
 ```json
 {
-  "name": "ESP32_Outdoor_Unit"
+  "name": "ESP32_Outdoor_Unit",
+  "scope": "publish" // "publish", "subscribe", or "pubsub"
 }
 ```
 **Response (201 Created):**
@@ -148,6 +149,35 @@ POST /channels/{channel_id}/devices
   "name": "ESP32_Outdoor_Unit",
   "mqtt_username": "d_0a1b2c3d4e",
   "mqtt_password": "raw_generated_password_revealed_once",
+  "scope": "publish",
+  "is_active": true,
+  "created_at": "2026-11-12T00:00:00Z"
+}
+```
+
+---
+
+### Update Device Access Control
+```http
+PATCH /channels/{channel_id}/devices/{device_id}
+```
+**Request Body:**
+```json
+{
+  "name": "ESP32_Updated_Name",
+  "scope": "pubsub", // "publish", "subscribe", or "pubsub"
+  "is_active": true
+}
+```
+**Response (200 OK):**
+```json
+{
+  "id": 1,
+  "channel_id": 1,
+  "name": "ESP32_Updated_Name",
+  "mqtt_username": "d_0a1b2c3d4e",
+  "scope": "pubsub",
+  "is_active": true,
   "created_at": "2026-11-12T00:00:00Z"
 }
 ```
@@ -229,6 +259,39 @@ Content-Type: application/json
   "temperature": 23.8,
   "humidity": 61.2,
   "battery_v": 3.78
+}
+```
+
+---
+
+### Export Telemetry Data (CSV / JSON)
+```http
+GET /channels/{channel_id}/export?format=csv&resolution=raw
+X-API-Key: tl_read_xxxxxxxxxxxxxxxxxxxx
+```
+**Query Parameters:**
+- `format`: `csv` or `json`.
+- `resolution`: `auto`, `raw`, `1m`, or `1h`.
+- `fields`: Comma-separated list of field keys (optional).
+- `start`: ISO 8601 timestamp.
+- `end`: ISO 8601 timestamp.
+
+**Response (200 OK):**
+Streaming CSV file attachment or JSON payload.
+
+---
+
+### Clear Channel Telemetry Data
+```http
+DELETE /channels/{channel_id}/data
+Authorization: Bearer <jwt_access_token>
+```
+**Response (200 OK):**
+```json
+{
+  "status": "cleared",
+  "channel_id": 1,
+  "detail": "All telemetry points and messages have been cleared."
 }
 ```
 

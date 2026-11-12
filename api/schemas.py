@@ -109,6 +109,12 @@ class FieldUpdate(BaseModel):
 # -----------------------------------------------------------------------------
 class DeviceCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=64)
+    scope: str = Field("publish", pattern=r"^(publish|subscribe|pubsub)$")
+
+class DeviceUpdate(BaseModel):
+    name: str | None = Field(None, min_length=1, max_length=64)
+    scope: str | None = Field(None, pattern=r"^(publish|subscribe|pubsub)$")
+    is_active: bool | None = None
 
 class DeviceCreatedOut(BaseModel):
     id: int
@@ -116,6 +122,8 @@ class DeviceCreatedOut(BaseModel):
     name: str
     mqtt_username: str
     mqtt_password: str # Shown once during device creation
+    scope: str
+    is_active: bool
     created_at: datetime
 
 class DeviceOut(BaseModel):
@@ -123,6 +131,7 @@ class DeviceOut(BaseModel):
     channel_id: int
     name: str
     mqtt_username: str
+    scope: str
     is_active: bool
     created_at: datetime
 

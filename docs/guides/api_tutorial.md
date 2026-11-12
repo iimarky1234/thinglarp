@@ -244,6 +244,46 @@ curl -X GET "https://api.iimarky123.io.vn/channels/1/data?resolution=auto&fields
 
 ---
 
+### 3. Downloading / Exporting Telemetry (CSV & JSON)
+
+ThingLarp provides a streaming export endpoint to download telemetry for offline analysis in Excel, pandas, or backup systems:
+
+=== "Export as CSV Spreadsheet"
+    ```bash
+    curl -X GET "https://api.iimarky123.io.vn/channels/1/export?format=csv&resolution=raw" \
+      -H "X-API-Key: tl_read_YOUR_KEY_HERE" \
+      -o channel_1_telemetry.csv
+    ```
+
+=== "Export as JSON Array"
+    ```bash
+    curl -X GET "https://api.iimarky123.io.vn/channels/1/export?format=json&resolution=1m" \
+      -H "X-API-Key: tl_read_YOUR_KEY_HERE" \
+      -o channel_1_telemetry.json
+    ```
+
+---
+
+### 4. Clearing Channel Telemetry Data
+
+To wipe all historical readings and message logs while retaining field definitions:
+
+```bash
+curl -X DELETE "https://api.iimarky123.io.vn/channels/1/data" \
+  -H "X-API-Key: tl_write_YOUR_KEY_HERE"
+```
+
+Response:
+```json
+{
+  "status": "cleared",
+  "channel_id": 1,
+  "detail": "All telemetry points and messages have been cleared."
+}
+```
+
+---
+
 ## ⚡ Tutorial 3: Real-Time Telemetry Streaming via MQTT
 
 When building embedded microcontroller firmware (ESP32, STM32, Raspberry Pi Pico), MQTT is strongly recommended over HTTP because:

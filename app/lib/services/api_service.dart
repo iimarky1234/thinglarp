@@ -143,16 +143,40 @@ class ApiService {
     throw Exception('Failed to load devices');
   }
 
-  Future<Device> createDevice(int channelId, String name) async {
+  Future<Device> createDevice(int channelId, String name, {String scope = 'publish'}) async {
     final res = await http.post(
       Uri.parse('${config.apiUrl}/channels/$channelId/devices'),
       headers: _headers,
-      body: jsonEncode({'name': name}),
+      body: jsonEncode({'name': name, 'scope': scope}),
     );
     if (res.statusCode == 201) {
       return Device.fromJson(jsonDecode(res.body));
     }
     throw Exception('Failed to create device');
+  }
+
+  Future<Device> updateDevice(
+    int channelId,
+    int deviceId, {
+    String? name,
+    String? scope,
+    bool? isActive,
+  }) async {
+    final body = <String, dynamic>{};
+    if (name != null) body['name'] = name;
+    if (scope != null) body['scope'] = scope;
+    if (isActive != null) body['is_active'] = isActive;
+
+    final res = await http.patch(
+      Uri.parse('${config.apiUrl}/channels/$channelId/devices/$deviceId'),
+      headers: _headers,
+      body: jsonEncode(body),
+    );
+    if (res.statusCode == 200) {
+      return Device.fromJson(jsonDecode(res.body));
+    }
+    final err = jsonDecode(res.body)['detail'] ?? 'Failed to update device';
+    throw Exception(err);
   }
 
   Future<void> deleteDevice(int channelId, int deviceId) async {
@@ -259,6 +283,43 @@ class ApiService {
       return jsonDecode(res.body) as Map<String, dynamic>;
     }
     final err = jsonDecode(res.body)['detail'] ?? 'Failed to post telemetry';
+    throw Exception(err);
+  }
+
+  Future<void> clearTelemetry(int channelId) async {
+    final res = await http.delete(
+      Uri.parse('${config.apiUrl}/channels/$channelId/data'),
+      headers: _headers,
+    );
+    if (res.statusCode != 200) {
+      final err = jsonDecode(res.body)['detail'] ?? 'Failed to clear telemetry';
+      throw Exception(err);
+    }
+  }
+
+  Future<String> exportTelemetry(
+    int channelId, {
+    String format = 'csv',
+    String resolution = 'raw',
+    DateTime? start,
+    DateTime? end,
+    String? fields,
+  }) async {
+    final queryParams = <String, String>{
+      'format': format,
+      'resolution': resolution,
+      if (start != null) 'start': start.toIso8601String(),
+      if (end != null) 'end': end.toIso8601String(),
+      if (fields != null && fields.isNotEmpty) 'fields': fields,
+    };
+    final uri = Uri.parse('${config.apiUrl}/channels/$channelId/export')
+        .replace(queryParameters: queryParams);
+
+    final res = await http.get(uri, headers: _headers);
+    if (res.statusCode == 200) {
+      return res.body;
+    }
+    final err = jsonDecode(res.body)['detail'] ?? 'Failed to export telemetry';
     throw Exception(err);
   }
 

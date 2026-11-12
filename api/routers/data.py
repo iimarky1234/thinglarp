@@ -1,8 +1,10 @@
 """api/routers/data.py: Telemetry data ingestion via MQTT publishing and historical querying."""
 
+import csv
+import io
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Any
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
 import asyncpg
 import orjson
 
@@ -216,3 +218,154 @@ async def get_latest_telemetry(
         timestamp=row["time"],
         fields=fields_dict,
     )
+
+
+@router.delete("/data", status_code=status.HTTP_200_OK)
+async def clear_telemetry(
+    channel_id: int,
+    db: Annotated[asyncpg.Connection, Depends(get_db)],
+    current_user: Annotated[CurrentUser | None, Depends(get_optional_current_user)] = None,
+    x_api_key: Annotated[str | None, Header()] = None,
+):
+    """
+    Clear all telemetry data (points and message logs) for a channel.
+    Requires channel owner authorization or API key with write access.
+    """
+    await authorize_channel_access(channel_id, "write", x_api_key, current_user, db)
+
+    await db.execute("DELETE FROM telemetry.points WHERE channel_id = $1;", channel_id)
+    await db.execute("DELETE FROM telemetry.messages WHERE channel_id = $1;", channel_id)
+
+    return {
+        "status": "cleared",
+        "channel_id": channel_id,
+        "detail": "All telemetry points and messages have been cleared.",
+    }
+
+
+@router.get("/export")
+async def export_telemetry(
+    channel_id: int,
+    db: Annotated[asyncpg.Connection, Depends(get_db)],
+    format: str = Query("csv", pattern=r"^(csv|json)$"),
+    resolution: str = Query("raw", pattern=r"^(auto|raw|1m|1h)$"),
+    fields: str | None = Query(None, description="Comma-separated field keys"),
+    start: datetime | None = Query(None),
+    end: datetime | None = Query(None),
+    x_api_key: Annotated[str | None, Header()] = None,
+    current_user: Annotated[CurrentUser | None, Depends(get_optional_current_user)] = None,
+):
+    """
+    Export channel telemetry data in CSV or JSON format.
+    Supports time-range filtering and resolution selection.
+    """
+    await authorize_channel_access(channel_id, "read", x_api_key, current_user, db)
+
+    now = datetime.now(timezone.utc)
+    end_time = end or now
+    start_time = start or (end_time - timedelta(days=30))
+
+    # Resolve field mappings
+    field_rows = await db.fetch("SELECT id, key FROM app.channel_fields WHERE channel_id = $1", channel_id)
+    field_map = {r["id"]: r["key"] for r in field_rows}
+
+    if not field_map:
+        if format == "csv":
+            return Response(content="time,field,value\n", media_type="text/csv", headers={
+                "Content-Disposition": f'attachment; filename="channel_{channel_id}_export.csv"'
+            })
+        return Response(content=orjson.dumps({"channel_id": channel_id, "points": []}), media_type="application/json", headers={
+            "Content-Disposition": f'attachment; filename="channel_{channel_id}_export.json"'
+        })
+
+    filter_keys = [f.strip() for f in fields.split(",")] if fields else None
+    if filter_keys:
+        field_map = {fid: fkey for fid, fkey in field_map.items() if fkey in filter_keys}
+    field_ids = list(field_map.keys())
+
+    if not field_ids:
+        rows = []
+        chosen_resolution = resolution
+    else:
+        chosen_resolution = resolution
+        if chosen_resolution == "auto":
+            delta = end_time - start_time
+            if delta > timedelta(days=14):
+                chosen_resolution = "1h"
+            elif delta > timedelta(hours=6):
+                chosen_resolution = "1m"
+            else:
+                chosen_resolution = "raw"
+
+        if chosen_resolution == "raw":
+            query = """
+                SELECT time, field_id, value
+                FROM telemetry.points
+                WHERE channel_id = $1 AND field_id = ANY($2::int[]) AND time >= $3 AND time <= $4
+                ORDER BY time ASC;
+            """
+            raw_rows = await db.fetch(query, channel_id, field_ids, start_time, end_time)
+            rows = [{"time": r["time"].isoformat(), "field": field_map[r["field_id"]], "value": r["value"]} for r in raw_rows]
+        elif chosen_resolution == "1m":
+            query = """
+                SELECT bucket_1m AS time, field_id, avg_value AS value, min_value, max_value, count_points
+                FROM telemetry.points_1m
+                WHERE channel_id = $1 AND field_id = ANY($2::int[]) AND bucket_1m >= $3 AND bucket_1m <= $4
+                ORDER BY bucket_1m ASC;
+            """
+            agg_rows = await db.fetch(query, channel_id, field_ids, start_time, end_time)
+            rows = [{
+                "time": r["time"].isoformat(),
+                "field": field_map[r["field_id"]],
+                "value": r["value"],
+                "min": r["min_value"],
+                "max": r["max_value"],
+                "count": r["count_points"],
+            } for r in agg_rows]
+        else:
+            query = """
+                SELECT bucket_1h AS time, field_id, avg_value AS value, min_value, max_value, count_points
+                FROM telemetry.points_1h
+                WHERE channel_id = $1 AND field_id = ANY($2::int[]) AND bucket_1h >= $3 AND bucket_1h <= $4
+                ORDER BY bucket_1h ASC;
+            """
+            agg_rows = await db.fetch(query, channel_id, field_ids, start_time, end_time)
+            rows = [{
+                "time": r["time"].isoformat(),
+                "field": field_map[r["field_id"]],
+                "value": r["value"],
+                "min": r["min_value"],
+                "max": r["max_value"],
+                "count": r["count_points"],
+            } for r in agg_rows]
+
+    if format == "csv":
+        output = io.StringIO()
+        writer = csv.writer(output)
+        if chosen_resolution == "raw":
+            writer.writerow(["time", "field", "value"])
+            for r in rows:
+                writer.writerow([r["time"], r["field"], r["value"]])
+        else:
+            writer.writerow(["time", "field", "avg_value", "min_value", "max_value", "count"])
+            for r in rows:
+                writer.writerow([r["time"], r["field"], r["value"], r["min"], r["max"], r["count"]])
+
+        csv_bytes = output.getvalue().encode("utf-8")
+        return Response(
+            content=csv_bytes,
+            media_type="text/csv",
+            headers={"Content-Disposition": f'attachment; filename="channel_{channel_id}_export.csv"'},
+        )
+    else:
+        json_bytes = orjson.dumps({
+            "channel_id": channel_id,
+            "resolution": chosen_resolution,
+            "count": len(rows),
+            "points": rows,
+        }, option=orjson.OPT_INDENT_2)
+        return Response(
+            content=json_bytes,
+            media_type="application/json",
+            headers={"Content-Disposition": f'attachment; filename="channel_{channel_id}_export.json"'},
+        )

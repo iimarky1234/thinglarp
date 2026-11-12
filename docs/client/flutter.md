@@ -11,7 +11,9 @@ The **ThingLarp App** (`app/`) is a cross-platform client developed with Flutter
 - **Dynamic Field Auto-Discovery:** Badges and metric cards dynamically spawn as incoming JSON packets reveal new keys.
 - **Real-Time MQTT Streaming:** Direct subscription to live channel topics (`channels/{id}/data`) using ephemeral session tokens.
 - **Resolution Selector:** Toggle between **Auto**, **Raw**, **1-Minute**, and **1-Hour** historical aggregations.
-- **Hardware & Key Management:** Provision new device credentials and issue HTTP Read/Write API keys with one click.
+- **Hardware & Device Access Control:** Provision hardware credentials with granular permission scopes (`Publish Only`, `Subscribe Only`, or `Full Pub/Sub`) and an instant Active/Suspended toggle.
+- **Data Export & Download:** Export telemetry directly to CSV spreadsheets or JSON arrays with customizable time windows and resolution aggregations.
+- **Data Purge / Clear:** Safely clear historical telemetry and message logs with confirmation safeguards while keeping field schemas intact.
 - **In-App API Tutorial & Interactive Code Generator:** View pre-filled cURL, Python, JS, and ESP32 code snippets with your active channel ID and API key, plus a live ping tester.
 - **Admin User Management Console:** Platform administrators can search users, toggle account status, promote/demote admins, reset passwords, and inspect cluster metrics.
 

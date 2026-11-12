@@ -35,22 +35,303 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
 
   void _showAddDeviceDialog() {
     final nameCtrl = TextEditingController(text: 'ESP32_Node_1');
+    String scope = 'publish';
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Provision New Device'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Device Name',
-                hintText: 'e.g. Field Sensor Node',
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Provision New Device'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Device Name',
+                  hintText: 'e.g. Field Sensor Node',
+                ),
               ),
+              const SizedBox(height: 16),
+              const Text('Access Control / Scope:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              const SizedBox(height: 8),
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: 'publish', label: Text('Pub'), icon: Icon(Icons.upload, size: 16)),
+                  ButtonSegment(value: 'subscribe', label: Text('Sub'), icon: Icon(Icons.download, size: 16)),
+                  ButtonSegment(value: 'pubsub', label: Text('Pub/Sub'), icon: Icon(Icons.sync_alt, size: 16)),
+                ],
+                selected: {scope},
+                onSelectionChanged: (newSelection) {
+                  setDialogState(() => scope = newSelection.first);
+                },
+              ),
+              const SizedBox(height: 8),
+              Text(
+                scope == 'publish'
+                    ? 'Device can only publish telemetry to this channel.'
+                    : scope == 'subscribe'
+                        ? 'Device can only subscribe to data and commands.'
+                        : 'Full access: device can publish telemetry and receive commands.',
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final name = nameCtrl.text.trim();
+                if (name.isNotEmpty) {
+                  final provider = context.read<ChannelProvider>();
+                  final dev = await provider.apiService.createDevice(widget.channel.id, name, scope: scope);
+                  await provider.loadDevices(widget.channel.id);
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  if (mounted) _showCredentialsDialog(dev);
+                }
+              },
+              child: const Text('Generate Credentials'),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditDeviceDialog(Device dev) {
+    final nameCtrl = TextEditingController(text: dev.name);
+    String scope = dev.scope;
+    bool isActive = dev.isActive;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('Edit ${dev.name} Access Control'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(labelText: 'Device Name'),
+              ),
+              const SizedBox(height: 16),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Device Active'),
+                subtitle: Text(isActive ? 'Device is allowed to connect over MQTT' : 'Connection suspended/blocked'),
+                value: isActive,
+                onChanged: (val) {
+                  setDialogState(() => isActive = val);
+                },
+              ),
+              const SizedBox(height: 12),
+              const Text('Permission Scope:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              const SizedBox(height: 8),
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: 'publish', label: Text('Pub'), icon: Icon(Icons.upload, size: 16)),
+                  ButtonSegment(value: 'subscribe', label: Text('Sub'), icon: Icon(Icons.download, size: 16)),
+                  ButtonSegment(value: 'pubsub', label: Text('Pub/Sub'), icon: Icon(Icons.sync_alt, size: 16)),
+                ],
+                selected: {scope},
+                onSelectionChanged: (newSelection) {
+                  setDialogState(() => scope = newSelection.first);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final provider = context.read<ChannelProvider>();
+                await provider.apiService.updateDevice(
+                  widget.channel.id,
+                  dev.id,
+                  name: nameCtrl.text.trim(),
+                  scope: scope,
+                  isActive: isActive,
+                );
+                await provider.loadDevices(widget.channel.id);
+                if (ctx.mounted) Navigator.pop(ctx);
+              },
+              child: const Text('Save Changes'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showExportDialog() {
+    String format = 'csv';
+    String range = '24h';
+    String resolution = 'raw';
+    bool isExporting = false;
+    String? exportedData;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.download, color: Colors.cyanAccent),
+              SizedBox(width: 8),
+              Text('Export Channel Telemetry'),
+            ],
+          ),
+          content: SizedBox(
+            width: 480,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('File Format:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(height: 6),
+                  SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(value: 'csv', label: Text('CSV Spreadsheet'), icon: Icon(Icons.table_chart, size: 16)),
+                      ButtonSegment(value: 'json', label: Text('JSON Array'), icon: Icon(Icons.data_object, size: 16)),
+                    ],
+                    selected: {format},
+                    onSelectionChanged: (s) => setDialogState(() => format = s.first),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Time Range:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(height: 6),
+                  SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(value: '24h', label: Text('24 Hours')),
+                      ButtonSegment(value: '7d', label: Text('7 Days')),
+                      ButtonSegment(value: '30d', label: Text('30 Days')),
+                      ButtonSegment(value: 'all', label: Text('All Time')),
+                    ],
+                    selected: {range},
+                    onSelectionChanged: (s) => setDialogState(() => range = s.first),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Resolution / Aggregation:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(height: 6),
+                  SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(value: 'raw', label: Text('Raw Points')),
+                      ButtonSegment(value: '1m', label: Text('1-Minute Avg')),
+                      ButtonSegment(value: '1h', label: Text('1-Hour Avg')),
+                    ],
+                    selected: {resolution},
+                    onSelectionChanged: (s) => setDialogState(() => resolution = s.first),
+                  ),
+                  if (exportedData != null) ...[
+                    const SizedBox(height: 16),
+                    const Text('Export Preview:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    const SizedBox(height: 6),
+                    Container(
+                      height: 120,
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.black26,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: SingleChildScrollView(
+                        child: SelectableText(
+                          exportedData!,
+                          style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Close'),
+            ),
+            if (exportedData != null)
+              ElevatedButton.icon(
+                icon: const Icon(Icons.copy, size: 16),
+                label: const Text('Copy to Clipboard'),
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: exportedData!));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Exported data copied to clipboard!')),
+                  );
+                },
+              )
+            else
+              ElevatedButton.icon(
+                icon: isExporting
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.file_download),
+                label: Text(isExporting ? 'Fetching...' : 'Fetch & Export'),
+                onPressed: isExporting
+                    ? null
+                    : () async {
+                        setDialogState(() => isExporting = true);
+                        try {
+                          final now = DateTime.now();
+                          DateTime? start;
+                          if (range == '24h') start = now.subtract(const Duration(hours: 24));
+                          if (range == '7d') start = now.subtract(const Duration(days: 7));
+                          if (range == '30d') start = now.subtract(const Duration(days: 30));
+
+                          final provider = context.read<ChannelProvider>();
+                          final data = await provider.apiService.exportTelemetry(
+                            widget.channel.id,
+                            format: format,
+                            resolution: resolution,
+                            start: start,
+                            end: now,
+                          );
+
+                          setDialogState(() {
+                            isExporting = false;
+                            exportedData = data;
+                          });
+                        } catch (e) {
+                          setDialogState(() => isExporting = false);
+                          if (ctx.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Export failed: $e')),
+                            );
+                          }
+                        }
+                      },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showClearDataDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.redAccent),
+            SizedBox(width: 8),
+            Text('Clear Telemetry Data'),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to permanently delete all recorded data points and message history for channel "${widget.channel.name}"?\n\n'
+          'Channel field definitions will be preserved, but all historical time-series entries will be permanently erased. This action cannot be undone.',
         ),
         actions: [
           TextButton(
@@ -58,17 +339,31 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
             child: const Text('Cancel'),
           ),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade700, foregroundColor: Colors.white),
             onPressed: () async {
-              final name = nameCtrl.text.trim();
-              if (name.isNotEmpty) {
-                final provider = context.read<ChannelProvider>();
-                final dev = await provider.apiService.createDevice(widget.channel.id, name);
-                await provider.loadDevices(widget.channel.id);
-                if (ctx.mounted) Navigator.pop(ctx);
-                if (mounted) _showCredentialsDialog(dev);
+              Navigator.pop(ctx);
+              final provider = context.read<ChannelProvider>();
+              try {
+                await provider.apiService.clearTelemetry(widget.channel.id);
+                await Future.wait([
+                  provider.loadFields(widget.channel.id),
+                  provider.loadHistoricalData(widget.channel.id, resolution: provider.currentResolution),
+                  provider.loadLatestSnapshot(widget.channel.id),
+                ]);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('All channel telemetry cleared successfully!')),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to clear data: $e')),
+                  );
+                }
               }
             },
-            child: const Text('Generate Credentials'),
+            child: const Text('Clear All Data'),
           ),
         ],
       ),
@@ -245,6 +540,36 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
                 ),
               );
             },
+          ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            tooltip: 'Channel Actions',
+            onSelected: (val) {
+              if (val == 'export') _showExportDialog();
+              if (val == 'clear') _showClearDataDialog();
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'export',
+                child: Row(
+                  children: [
+                    Icon(Icons.download, size: 20, color: Colors.cyanAccent),
+                    SizedBox(width: 10),
+                    Text('Download / Export Data'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'clear',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_sweep, size: 20, color: Colors.redAccent),
+                    SizedBox(width: 10),
+                    Text('Clear All Telemetry Data'),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
         bottom: TabBar(
@@ -460,21 +785,83 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
               ),
             )
           else
-            ...provider.devices.map((dev) => Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    leading: const CircleAvatar(child: Icon(Icons.memory)),
-                    title: Text(dev.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('MQTT User: ${dev.mqttUsername}'),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                      onPressed: () async {
-                        await provider.apiService.deleteDevice(widget.channel.id, dev.id);
-                        await provider.loadDevices(widget.channel.id);
-                      },
-                    ),
+            ...provider.devices.map((dev) {
+              Color scopeColor;
+              String scopeLabel;
+              if (dev.scope == 'pubsub') {
+                scopeColor = Colors.purpleAccent;
+                scopeLabel = 'PUB & SUB';
+              } else if (dev.scope == 'subscribe') {
+                scopeColor = Colors.blueAccent;
+                scopeLabel = 'SUB ONLY';
+              } else {
+                scopeColor = Colors.greenAccent;
+                scopeLabel = 'PUB ONLY';
+              }
+
+              return Card(
+                margin: const EdgeInsets.only(bottom: 12),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: dev.isActive ? Colors.cyan.withValues(alpha: 0.15) : Colors.grey.withValues(alpha: 0.15),
+                        child: Icon(Icons.memory, color: dev.isActive ? Colors.cyanAccent : Colors.grey),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(dev.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: scopeColor.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(color: scopeColor.withValues(alpha: 0.5)),
+                                  ),
+                                  child: Text(
+                                    scopeLabel,
+                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: scopeColor),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text('MQTT User: ${dev.mqttUsername}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                          ],
+                        ),
+                      ),
+                      Switch(
+                        value: dev.isActive,
+                        activeThumbColor: Colors.greenAccent,
+                        onChanged: (val) async {
+                          await provider.apiService.updateDevice(widget.channel.id, dev.id, isActive: val);
+                          await provider.loadDevices(widget.channel.id);
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.edit_outlined, size: 20),
+                        tooltip: 'Edit Access Control',
+                        onPressed: () => _showEditDeviceDialog(dev),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                        onPressed: () async {
+                          await provider.apiService.deleteDevice(widget.channel.id, dev.id);
+                          await provider.loadDevices(widget.channel.id);
+                        },
+                      ),
+                    ],
                   ),
-                )),
+                ),
+              );
+            }),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(

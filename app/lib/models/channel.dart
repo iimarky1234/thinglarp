@@ -70,6 +70,7 @@ class Device {
   final String name;
   final String mqttUsername;
   final String? mqttPassword;
+  final String scope;
   final bool isActive;
   final DateTime createdAt;
 
@@ -79,6 +80,7 @@ class Device {
     required this.name,
     required this.mqttUsername,
     this.mqttPassword,
+    this.scope = 'publish',
     required this.isActive,
     required this.createdAt,
   });
@@ -90,6 +92,7 @@ class Device {
       name: json['name'] as String,
       mqttUsername: json['mqtt_username'] as String,
       mqttPassword: json['mqtt_password'] as String?,
+      scope: json['scope'] as String? ?? 'publish',
       isActive: json['is_active'] as bool? ?? true,
       createdAt: DateTime.parse(json['created_at'] as String),
     );

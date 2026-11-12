@@ -1164,6 +1164,28 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#3-downloading-exporting-telemetry-csv-json" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Downloading / Exporting Telemetry (CSV &amp; JSON)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-clearing-channel-telemetry-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Clearing Channel Telemetry Data
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1646,6 +1668,28 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#3-downloading-exporting-telemetry-csv-json" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Downloading / Exporting Telemetry (CSV &amp; JSON)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-clearing-channel-telemetry-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Clearing Channel Telemetry Data
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1981,6 +2025,38 @@
 <li><strong><code>start</code></strong> / <strong><code>end</code></strong>: Optional ISO 8601 timestamps (defaults to the last 24 hours).</li>
 </ul>
 <hr />
+<h3 id="3-downloading-exporting-telemetry-csv-json">3. Downloading / Exporting Telemetry (CSV &amp; JSON)<a class="headerlink" href="#3-downloading-exporting-telemetry-csv-json" title="Permanent link">&para;</a></h3>
+<p>ThingLarp provides a streaming export endpoint to download telemetry for offline analysis in Excel, pandas, or backup systems:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Export as CSV Spreadsheet</label><label for="__tabbed_2_2">Export as JSON Array</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span><span class="s2">"https://api.iimarky123.io.vn/channels/1/export?format=csv&amp;resolution=raw"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">"X-API-Key: tl_read_YOUR_KEY_HERE"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span>-o<span class="w"> </span>channel_1_telemetry.csv
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span><span class="s2">"https://api.iimarky123.io.vn/channels/1/export?format=json&amp;resolution=1m"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">"X-API-Key: tl_read_YOUR_KEY_HERE"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span>-o<span class="w"> </span>channel_1_telemetry.json
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<hr />
+<h3 id="4-clearing-channel-telemetry-data">4. Clearing Channel Telemetry Data<a class="headerlink" href="#4-clearing-channel-telemetry-data" title="Permanent link">&para;</a></h3>
+<p>To wipe all historical readings and message logs while retaining field definitions:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>DELETE<span class="w"> </span><span class="s2">"https://api.iimarky123.io.vn/channels/1/data"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">"X-API-Key: tl_write_YOUR_KEY_HERE"</span>
+</span></code></pre></div>
+<p>Response:
+<div class="language-json highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="p">{</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span><span class="nt">"status"</span><span class="p">:</span><span class="w"> </span><span class="s2">"cleared"</span><span class="p">,</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span><span class="nt">"channel_id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">  </span><span class="nt">"detail"</span><span class="p">:</span><span class="w"> </span><span class="s2">"All telemetry points and messages have been cleared."</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="p">}</span>
+</span></code></pre></div></p>
+<hr />
 <h2 id="tutorial-3-real-time-telemetry-streaming-via-mqtt">⚡ Tutorial 3: Real-Time Telemetry Streaming via MQTT<a class="headerlink" href="#tutorial-3-real-time-telemetry-streaming-via-mqtt" title="Permanent link">&para;</a></h2>
 <p>When building embedded microcontroller firmware (ESP32, STM32, Raspberry Pi Pico), MQTT is strongly recommended over HTTP because:
 1. <strong>Low Overhead:</strong> Single persistent TCP TLS socket avoids opening and closing TLS handshakes on every reading.
@@ -1995,17 +2071,17 @@
 <li><strong>Password:</strong> <code>YOUR_DEVICE_PASSWORD</code></li>
 </ul>
 <h3 id="publishing-via-mosquitto-cli">Publishing via Mosquitto CLI<a class="headerlink" href="#publishing-via-mosquitto-cli" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>mosquitto_pub<span class="w"> </span>-h<span class="w"> </span><span class="s2">"mqtt.iimarky123.io.vn"</span><span class="w"> </span>-p<span class="w"> </span><span class="m">8883</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span>-u<span class="w"> </span><span class="s2">"d_my_sensor_node"</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span>-P<span class="w"> </span><span class="s2">"my_device_secret_password"</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span>-t<span class="w"> </span><span class="s2">"channels/1/data"</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">  </span>-m<span class="w"> </span><span class="s1">'{"temperature": 25.1, "humidity": 59.3}'</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>mosquitto_pub<span class="w"> </span>-h<span class="w"> </span><span class="s2">"mqtt.iimarky123.io.vn"</span><span class="w"> </span>-p<span class="w"> </span><span class="m">8883</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span>-u<span class="w"> </span><span class="s2">"d_my_sensor_node"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span>-P<span class="w"> </span><span class="s2">"my_device_secret_password"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">  </span>-t<span class="w"> </span><span class="s2">"channels/1/data"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">  </span>-m<span class="w"> </span><span class="s1">'{"temperature": 25.1, "humidity": 59.3}'</span>
 </span></code></pre></div>
 <h3 id="subscribing-to-live-channel-events">Subscribing to Live Channel Events<a class="headerlink" href="#subscribing-to-live-channel-events" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>mosquitto_sub<span class="w"> </span>-h<span class="w"> </span><span class="s2">"mqtt.iimarky123.io.vn"</span><span class="w"> </span>-p<span class="w"> </span><span class="m">8883</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span>-u<span class="w"> </span><span class="s2">"d_my_sensor_node"</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span>-P<span class="w"> </span><span class="s2">"my_device_secret_password"</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">  </span>-t<span class="w"> </span><span class="s2">"channels/1/data"</span><span class="w"> </span>-v
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>mosquitto_sub<span class="w"> </span>-h<span class="w"> </span><span class="s2">"mqtt.iimarky123.io.vn"</span><span class="w"> </span>-p<span class="w"> </span><span class="m">8883</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span>-u<span class="w"> </span><span class="s2">"d_my_sensor_node"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span>-P<span class="w"> </span><span class="s2">"my_device_secret_password"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">  </span>-t<span class="w"> </span><span class="s2">"channels/1/data"</span><span class="w"> </span>-v
 </span></code></pre></div>
 <hr />
 <h2 id="http-status-codes-troubleshooting">❓ HTTP Status Codes &amp; Troubleshooting<a class="headerlink" href="#http-status-codes-troubleshooting" title="Permanent link">&para;</a></h2>

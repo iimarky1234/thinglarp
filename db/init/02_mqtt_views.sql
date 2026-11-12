@@ -39,13 +39,17 @@ RETURNS SETOF TEXT
 LANGUAGE sql STABLE SECURITY DEFINER
 SET search_path = app, mqtt, pg_temp
 AS $$
-    -- 1. Devices: May ONLY publish (p_acc = 2) to their specific channel topics
+    -- 1. Devices: Access governed by is_active and scope (publish, subscribe, pubsub)
     SELECT 'channels/' || d.channel_id || '/' || t.suffix
     FROM app.devices d
-    CROSS JOIN (VALUES ('data'), ('status')) AS t(suffix)
+    CROSS JOIN (VALUES ('data'), ('status'), ('commands')) AS t(suffix)
     WHERE d.mqtt_username = p_username 
       AND d.is_active 
-      AND p_acc = 2
+      AND (
+        (p_acc = 2 AND d.scope IN ('publish', 'pubsub') AND t.suffix IN ('data', 'status'))
+        OR
+        (p_acc IN (1, 4) AND d.scope IN ('subscribe', 'pubsub') AND t.suffix IN ('data', 'commands'))
+      )
 
     UNION ALL
 
