@@ -11,6 +11,7 @@ volumes:
   timescaledb_data:
   mosquitto_data:
   letsencrypt_data:
+  homeassistant_config:
 
 services:
   # ===========================================================================
@@ -186,3 +187,27 @@ services:
       - "traefik.http.routers.web.entrypoints=websecure"
       - "traefik.http.routers.web.tls.certresolver=letsencrypt"
       - "traefik.http.services.web.loadbalancer.server.port=80"
+
+  # ===========================================================================
+  # Home Assistant (Open-source Smart Home Hub)
+  # ===========================================================================
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: iot_homeassistant
+    restart: unless-stopped
+    privileged: true
+    environment:
+      - TZ=${TZ:-Asia/Bangkok}
+    volumes:
+      - homeassistant_config:/config
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - edge
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=iot_edge"
+      - "traefik.http.routers.homeassistant.rule=Host(`homeassit.iimarky123.io.vn`)"
+      - "traefik.http.routers.homeassistant.entrypoints=websecure"
+      - "traefik.http.routers.homeassistant.tls.certresolver=letsencrypt"
+      - "traefik.http.services.homeassistant.loadbalancer.server.port=8123"
