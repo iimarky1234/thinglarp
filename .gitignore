@@ -1,0 +1,92 @@
+# ==============================================================================
+# ThingLarp Root .gitignore
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Security & Environment Secrets
+# ------------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.cert
+
+# Traefik & ACME Certificates
+acme.json
+**/traefik/acme/
+**/traefik/acme.json
+
+# ------------------------------------------------------------------------------
+# Python & Virtual Environments
+# ------------------------------------------------------------------------------
+.venv/
+venv/
+ENV/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ------------------------------------------------------------------------------
+# Documentation Build Output
+# ------------------------------------------------------------------------------
+site/
+.cache/
+
+# ------------------------------------------------------------------------------
+# Flutter & Dart (Mobile / Desktop / Web)
+# ------------------------------------------------------------------------------
+**/build/
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.pub-cache/
+**/.pub/
+**/coverage/
+*.iml
+*.ipr
+*.iws
+
+# Flutter Symbolication & Obfuscation
+*.symbols
+*.map.json
+
+# ------------------------------------------------------------------------------
+# Persistent Volume Mounts & Logs
+# ------------------------------------------------------------------------------
+*.log
+**/mosquitto/data/
+**/mosquitto/log/
+pgdata/
+timescaledata/
+
+# ------------------------------------------------------------------------------
+# Operating System & IDE Files
+# ------------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+[Dd]esktop.ini
+
+# Editors & IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.bak

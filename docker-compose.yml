@@ -1,0 +1,156 @@
+version: '3.8'
+
+networks:
+  edge:
+    name: iot_edge
+    driver: bridge
+  backend:
+    name: iot_backend
+    driver: bridge
+    internal: true # No external inbound or outbound traffic to database
+
+volumes:
+  timescaledb_data:
+  mosquitto_data:
+  letsencrypt_data:
+
+services:
+  # ===========================================================================
+  # Traefik v3 Edge Proxy (TLS termination, Let's Encrypt ACME)
+  # ===========================================================================
+  traefik:
+    image: traefik:latest
+    container_name: iot_traefik
+    restart: unless-stopped
+    environment:
+      - DOCKER_API_VERSION=1.44
+    ports:
+      - "80:80"       # HTTP (redirects to HTTPS)
+      - "443:443"     # HTTPS (API + MQTT over WebSockets)
+      - "8883:8883"   # MQTTS (TCP TLS for ESP32 and mobile)
+      - "8080:8080"   # Traefik dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - letsencrypt_data:/letsencrypt
+    networks:
+      - edge
+
+  # ===========================================================================
+  # PostgreSQL + TimescaleDB (Relational auth + High-throughput Hypertables)
+  # ===========================================================================
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: iot_timescaledb
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-iot}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-iot}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ===========================================================================
+  # Eclipse Mosquitto with mosquitto-go-auth
+  # ===========================================================================
+  mosquitto:
+    image: iegomez/mosquitto-go-auth:latest
+    container_name: iot_mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/etc/mosquitto/mosquitto.conf:ro
+      - mosquitto_data:/var/lib/mosquitto
+    networks:
+      - edge
+      - backend
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      # WSS Router: /mqtt WebSocket endpoint on port 443
+      - "traefik.http.routers.mqtt-ws.rule=Host(`${MQTT_DOMAIN}`) && PathPrefix(`/mqtt`)"
+      - "traefik.http.routers.mqtt-ws.entrypoints=websecure"
+      - "traefik.http.routers.mqtt-ws.tls.certresolver=letsencrypt"
+      - "traefik.http.services.mqtt-ws.loadbalancer.server.port=9001"
+      # MQTTS Router: TCP TLS on port 8883
+      - "traefik.tcp.routers.mqtt-tls.rule=HostSNI(`${MQTT_DOMAIN}`)"
+      - "traefik.tcp.routers.mqtt-tls.entrypoints=mqtts"
+      - "traefik.tcp.routers.mqtt-tls.tls.certresolver=letsencrypt"
+      - "traefik.tcp.services.mqtt-tls.loadbalancer.server.port=1883"
+
+  # ===========================================================================
+  # Python Ingestion Bridge (Consumes from MQTT, batches to TimescaleDB)
+  # ===========================================================================
+  bridge:
+    build:
+      context: ./bridge
+    container_name: iot_bridge
+    restart: unless-stopped
+    environment:
+      DB_HOST: timescaledb
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-iot}
+      DB_USER: iot_bridge
+      DB_PASSWORD: ${PG_BRIDGE_PASSWORD}
+      MQTT_HOST: mosquitto
+      MQTT_PORT: 1883
+      MQTT_USER: ${BRIDGE_MQTT_USER}
+      MQTT_PASSWORD: ${BRIDGE_MQTT_PASSWORD}
+    networks:
+      - backend
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+
+  # ===========================================================================
+  # FastAPI Application & Authentication Gate
+  # ===========================================================================
+  api:
+    build:
+      context: ./api
+    container_name: iot_api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DB_HOST: timescaledb
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-iot}
+      DB_USER: iot_api
+      DB_PASSWORD: ${PG_API_PASSWORD}
+      MQTT_HOST: mosquitto
+      MQTT_PORT: 1883
+      MQTT_USER: ${API_MQTT_USER}
+      MQTT_PASSWORD: ${API_MQTT_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-30}
+    networks:
+      - edge
+      - backend
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+    labels:
+      - "traefik.enable=true"
+      # HTTPS API Router
+      - "traefik.http.routers.api.rule=Host(`${API_DOMAIN}`)"
+      - "traefik.http.routers.api.entrypoints=websecure"
+      - "traefik.http.routers.api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.api.loadbalancer.server.port=8000"

@@ -1,0 +1,83 @@
+site_name: ThingLarp IoT Platform
+site_url: https://thinglarp.iimarky123.io.vn
+site_description: Production-grade, unconstrained IoT telemetry platform alternative to ThingSpeak
+site_author: ThingLarp Contributors
+docs_dir: docs
+
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: indigo
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default
+      primary: indigo
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  font:
+    text: Inter
+    code: JetBrains Mono
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.tracking
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+
+extra_css:
+  - stylesheets/extra.css
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - attr_list
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Architecture:
+      - Overview: architecture/overview.md
+      - Block Diagrams: architecture/block_diagrams.md
+      - Database & Hypertables: architecture/database.md
+  - Services:
+      - Mosquitto Broker: services/mosquitto.md
+      - Ingestion Bridge: services/bridge.md
+      - FastAPI Gateway: services/api.md
+      - Traefik Edge Proxy: services/traefik.md
+  - Flutter Application:
+      - Architecture & Setup: client/flutter.md
+      - Live MQTT Streaming: client/live_streaming.md
+      - Integration Examples: client/integration_examples.md
+  - Guides:
+      - Getting Started: guides/getting_started.md
+      - Environment Configuration (.env): guides/env_configuration.md
+      - Hardware Provisioning: guides/hardware_provisioning.md
+      - E2E Simulation & Testing: guides/simulation.md
+  - Reference:
+      - REST API Reference: reference/api_reference.md
+      - MQTT Topics & ACLs: reference/mqtt_topics.md
+      - Environment Variables: reference/environment_variables.md
