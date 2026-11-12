@@ -20,7 +20,7 @@ async def ensure_initial_admin() -> None:
     admin_user = (settings.initial_admin_username or "").strip()
     admin_pass = (settings.initial_admin_password or "").strip()
 
-    if not admin_user or not admin_pass:
+    if not admin_user:
         return
 
     from database import db_pool
@@ -41,13 +41,15 @@ async def ensure_initial_admin() -> None:
             params = []
             idx = 1
 
-            if not verify_user_password(existing["password_hash"], admin_pass):
+            # Sync password if INITIAL_ADMIN_PASSWORD was explicitly provided
+            if admin_pass and not verify_user_password(existing["password_hash"], admin_pass):
                 new_hash = hash_user_password(admin_pass)
                 updates.append(f"password_hash = ${idx}")
                 params.append(new_hash)
                 idx += 1
                 needs_update = True
 
+            # Ensure is_admin is True
             if not existing["is_admin"]:
                 updates.append(f"is_admin = ${idx}")
                 params.append(True)
@@ -58,10 +60,14 @@ async def ensure_initial_admin() -> None:
                 params.append(existing["id"])
                 sql = f"UPDATE app.users SET {', '.join(updates)} WHERE id = ${idx};"
                 await conn.execute(sql, *params)
-                logger.info(f"Updated initial admin account '{admin_user}' (is_admin=True, password synced).")
+                logger.info(f"Updated initial admin account '{admin_user}' (is_admin=True).")
             else:
                 logger.info(f"Initial admin account '{admin_user}' is verified and active (is_admin=True).")
         else:
+            if not admin_pass:
+                logger.warning(f"Cannot create new initial admin '{admin_user}': INITIAL_ADMIN_PASSWORD is required.")
+                return
+
             pwd_hash = hash_user_password(admin_pass)
             await conn.execute(
                 """
