@@ -238,6 +238,30 @@ class ApiService {
     throw Exception('Failed to get latest telemetry');
   }
 
+  Future<Map<String, dynamic>> postTelemetry({
+    required int channelId,
+    required Map<String, dynamic> data,
+    String? apiKey,
+  }) async {
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      if (apiKey != null && apiKey.isNotEmpty)
+        'X-API-Key': apiKey
+      else if (accessToken != null)
+        'Authorization': 'Bearer $accessToken',
+    };
+    final res = await http.post(
+      Uri.parse('${config.apiUrl}/channels/$channelId/data'),
+      headers: headers,
+      body: jsonEncode(data),
+    );
+    if (res.statusCode == 200 || res.statusCode == 202) {
+      return jsonDecode(res.body) as Map<String, dynamic>;
+    }
+    final err = jsonDecode(res.body)['detail'] ?? 'Failed to post telemetry';
+    throw Exception(err);
+  }
+
   // ---------------------------------------------------------------------------
   // Admin Methods
   // ---------------------------------------------------------------------------

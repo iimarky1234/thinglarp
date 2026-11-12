@@ -12,6 +12,7 @@ The **ThingLarp App** (`app/`) is a cross-platform client developed with Flutter
 - **Real-Time MQTT Streaming:** Direct subscription to live channel topics (`channels/{id}/data`) using ephemeral session tokens.
 - **Resolution Selector:** Toggle between **Auto**, **Raw**, **1-Minute**, and **1-Hour** historical aggregations.
 - **Hardware & Key Management:** Provision new device credentials and issue HTTP Read/Write API keys with one click.
+- **In-App API Tutorial & Interactive Code Generator:** View pre-filled cURL, Python, JS, and ESP32 code snippets with your active channel ID and API key, plus a live ping tester.
 - **Admin User Management Console:** Platform administrators can search users, toggle account status, promote/demote admins, reset passwords, and inspect cluster metrics.
 
 ---
@@ -36,7 +37,8 @@ app/lib/
 │   ├── login_screen.dart           # Sign In & Registration forms
 │   ├── channels_screen.dart        # Channel list cards & channel creation modal
 │   ├── channel_detail_screen.dart  # Channel dashboard: Charts, Messages, Devices, Keys
-│   └── admin_users_screen.dart     # Admin dashboard: Metrics, user moderation, credentials
+│   ├── admin_users_screen.dart     # Admin dashboard: Metrics, user moderation, credentials
+│   └── api_tutorial_screen.dart    # Interactive API tutorials & live telemetry ping tester
 └── main.dart                       # App initialization with Dark/Light theme
 ```
 

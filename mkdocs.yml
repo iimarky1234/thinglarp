@@ -76,6 +76,7 @@ nav:
       - Integration Examples: client/integration_examples.md
   - Guides:
       - Getting Started: guides/getting_started.md
+      - API Developer Tutorial: guides/api_tutorial.md
       - Environment Configuration (.env): guides/env_configuration.md
       - Hardware Provisioning: guides/hardware_provisioning.md
       - E2E Simulation & Testing: guides/simulation.md

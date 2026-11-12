@@ -7,6 +7,7 @@ import '../models/channel.dart';
 import '../models/telemetry.dart';
 import '../providers/channel_provider.dart';
 import '../services/mqtt_service.dart';
+import 'api_tutorial_screen.dart';
 
 class ChannelDetailScreen extends StatefulWidget {
   final Channel channel;
@@ -103,6 +104,22 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
           ],
         ),
         actions: [
+          TextButton.icon(
+            icon: const Icon(Icons.code, size: 18),
+            label: const Text('MQTT Code Examples'),
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ApiTutorialScreen(
+                    channel: widget.channel,
+                    initialTabIndex: 3,
+                  ),
+                ),
+              );
+            },
+          ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text('I Have Saved Them'),
@@ -184,6 +201,22 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
           ],
         ),
         actions: [
+          TextButton.icon(
+            icon: const Icon(Icons.code, size: 18),
+            label: const Text('View API Code Snippets'),
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ApiTutorialScreen(
+                    channel: widget.channel,
+                    initialTabIndex: 1,
+                  ),
+                ),
+              );
+            },
+          ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Done'),
@@ -200,6 +233,20 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.channel.name),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.school_outlined, color: Colors.cyanAccent),
+            tooltip: 'API Tutorials & Code Generator',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ApiTutorialScreen(channel: widget.channel),
+                ),
+              );
+            },
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
@@ -366,31 +413,54 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
 
   Widget _buildDevicesTab(ChannelProvider provider) {
     return Scaffold(
-      body: provider.devices.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.memory, size: 64, color: Colors.grey),
-                  const SizedBox(height: 16),
-                  const Text('No Devices Provisioned', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  const Text('Add an ESP32 or sensor node to get MQTT credentials.'),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: _showAddDeviceDialog,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add Device'),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Card(
+            color: Colors.teal.withValues(alpha: 0.1),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: Colors.teal.withValues(alpha: 0.3)),
+            ),
+            child: ListTile(
+              leading: const Icon(Icons.school, color: Colors.tealAccent),
+              title: const Text('MQTT Device Tutorials', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              subtitle: const Text('View ESP32 (Arduino / MicroPython) and Python MQTT streaming code examples.', style: TextStyle(fontSize: 12)),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ApiTutorialScreen(channel: widget.channel, initialTabIndex: 3),
                   ),
-                ],
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (provider.devices.isEmpty)
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  children: [
+                    const Icon(Icons.memory, size: 48, color: Colors.grey),
+                    const SizedBox(height: 12),
+                    const Text('No Devices Provisioned', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 6),
+                    const Text('Add an ESP32 or sensor node to generate MQTT credentials.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: _showAddDeviceDialog,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add Device'),
+                    ),
+                  ],
+                ),
               ),
             )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: provider.devices.length,
-              itemBuilder: (context, index) {
-                final dev = provider.devices[index];
-                return Card(
+          else
+            ...provider.devices.map((dev) => Card(
                   margin: const EdgeInsets.only(bottom: 12),
                   child: ListTile(
                     leading: const CircleAvatar(child: Icon(Icons.memory)),
@@ -404,9 +474,9 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
                       },
                     ),
                   ),
-                );
-              },
-            ),
+                )),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showAddDeviceDialog,
         icon: const Icon(Icons.add),
@@ -417,31 +487,54 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
 
   Widget _buildApiKeysTab(ChannelProvider provider) {
     return Scaffold(
-      body: provider.apiKeys.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.key_off, size: 64, color: Colors.grey),
-                  const SizedBox(height: 16),
-                  const Text('No API Keys Generated', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  const Text('Create an API key to ingest data via standard HTTP POST requests.'),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: _showCreateApiKeyDialog,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Generate API Key'),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Card(
+            color: Colors.cyan.withValues(alpha: 0.1),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: Colors.cyan.withValues(alpha: 0.3)),
+            ),
+            child: ListTile(
+              leading: const Icon(Icons.integration_instructions, color: Colors.cyanAccent),
+              title: const Text('HTTP REST API Tutorials', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              subtitle: const Text('View pre-filled cURL, Python, JavaScript, and ESP32 HTTP POST examples.', style: TextStyle(fontSize: 12)),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ApiTutorialScreen(channel: widget.channel, initialTabIndex: 1),
                   ),
-                ],
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (provider.apiKeys.isEmpty)
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  children: [
+                    const Icon(Icons.key_off, size: 48, color: Colors.grey),
+                    const SizedBox(height: 12),
+                    const Text('No API Keys Generated', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 6),
+                    const Text('Create an API key to ingest data via standard HTTP POST requests.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: _showCreateApiKeyDialog,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Generate API Key'),
+                    ),
+                  ],
+                ),
               ),
             )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: provider.apiKeys.length,
-              itemBuilder: (context, index) {
-                final k = provider.apiKeys[index];
-                return Card(
+          else
+            ...provider.apiKeys.map((k) => Card(
                   margin: const EdgeInsets.only(bottom: 12),
                   child: ListTile(
                     leading: CircleAvatar(
@@ -458,9 +551,9 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
                       },
                     ),
                   ),
-                );
-              },
-            ),
+                )),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showCreateApiKeyDialog,
         icon: const Icon(Icons.add),

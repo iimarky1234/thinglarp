@@ -6,6 +6,7 @@ import '../providers/channel_provider.dart';
 import 'channel_detail_screen.dart';
 import 'settings_screen.dart';
 import 'admin_users_screen.dart';
+import 'api_tutorial_screen.dart';
 
 class ChannelsScreen extends StatefulWidget {
   const ChannelsScreen({super.key});
@@ -112,6 +113,16 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                 );
               },
             ),
+          IconButton(
+            icon: const Icon(Icons.school_outlined, color: Colors.cyanAccent),
+            tooltip: 'API Tutorials & Code Generator',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ApiTutorialScreen()),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {
