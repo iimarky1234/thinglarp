@@ -89,6 +89,16 @@ class ChannelProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> updateFieldWidgetType(int channelId, int fieldId, String widgetType) async {
+    try {
+      await apiService.updateField(channelId, fieldId, widgetType: widgetType);
+      await loadFields(channelId);
+    } catch (e) {
+      debugPrint('Error updating field widget type: $e');
+      rethrow;
+    }
+  }
+
   Future<void> loadDevices(int channelId) async {
     try {
       devices = await apiService.getDevices(channelId);

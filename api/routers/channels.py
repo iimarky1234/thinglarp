@@ -120,7 +120,7 @@ async def list_channel_fields(
 
     rows = await db.fetch(
         """
-        SELECT id, channel_id, key, label, unit, value_type, first_seen_at
+        SELECT id, channel_id, key, label, unit, value_type, widget_type, first_seen_at
         FROM app.channel_fields
         WHERE channel_id = $1
         ORDER BY id ASC;
@@ -149,16 +149,18 @@ async def update_channel_field(
 
     label = payload.label if payload.label is not None else field["label"]
     unit = payload.unit if payload.unit is not None else field["unit"]
+    widget_type = payload.widget_type if payload.widget_type is not None else field["widget_type"]
 
     row = await db.fetchrow(
         """
         UPDATE app.channel_fields
-        SET label = $1, unit = $2
-        WHERE id = $3 AND channel_id = $4
-        RETURNING id, channel_id, key, label, unit, value_type, first_seen_at;
+        SET label = $1, unit = $2, widget_type = $3
+        WHERE id = $4 AND channel_id = $5
+        RETURNING id, channel_id, key, label, unit, value_type, widget_type, first_seen_at;
         """,
         label,
         unit,
+        widget_type,
         field_id,
         channel_id,
     )

@@ -114,10 +114,35 @@ GET /channels/{channel_id}/fields
 **Response (200 OK):**
 ```json
 [
-  {"id": 1, "name": "temperature", "data_type": "numeric", "created_at": "..."},
-  {"id": 2, "name": "humidity", "data_type": "numeric", "created_at": "..."}
+  {
+    "id": 1,
+    "channel_id": 1,
+    "key": "temperature",
+    "label": "Ambient Temp",
+    "unit": "°C",
+    "value_type": "number",
+    "widget_type": "line",
+    "first_seen_at": "2026-11-12T04:38:34Z"
+  }
 ]
 ```
+
+---
+
+### Update Channel Field Metadata & Widget Type
+```http
+PATCH /channels/{channel_id}/fields/{field_id}
+Authorization: Bearer <jwt_access_token>
+```
+**Request Body:**
+```json
+{
+  "label": "Living Room Temp",
+  "unit": "°C",
+  "widget_type": "gauge"
+}
+```
+*`widget_type` accepts `line`, `gauge`, `kpi`, or `status`.*
 
 ---
 
@@ -138,6 +163,41 @@ POST /channels/{channel_id}/devices
 ```json
 {
   "name": "ESP32_Outdoor_Unit",
+  "scope": "pubsub"
+}
+```
+*`scope` accepts `publish` (default), `subscribe`, or `pubsub`.*
+
+**Response (201 Created):**
+```json
+{
+  "id": 1,
+  "channel_id": 1,
+  "name": "ESP32_Outdoor_Unit",
+  "scope": "pubsub",
+  "is_active": true,
+  "mqtt_username": "dev_ch1_1",
+  "mqtt_password": "<generated_password>",
+  "created_at": "2026-11-12T04:38:34Z"
+}
+```
+
+---
+
+### Update Device Access Control & Status
+```http
+PATCH /channels/{channel_id}/devices/{device_id}
+Authorization: Bearer <jwt_access_token>
+```
+**Request Body:**
+```json
+{
+  "name": "ESP32_Outdoor_Unit_Renamed",
+  "scope": "pubsub",
+  "is_active": true
+}
+```
+*`scope` accepts `publish`, `subscribe`, or `pubsub`. Setting `is_active: false` immediately denies MQTT authentication.*
   "scope": "publish" // "publish", "subscribe", or "pubsub"
 }
 ```
@@ -292,6 +352,68 @@ Authorization: Bearer <jwt_access_token>
   "status": "cleared",
   "channel_id": 1,
   "detail": "All telemetry points and messages have been cleared."
+}
+```
+
+---
+
+### Dispatch Downlink Device Commands
+```http
+POST /channels/{channel_id}/commands
+Authorization: Bearer <jwt_access_token>
+```
+*Can also authenticate via `X-API-Key: tl_write_...`.*
+
+**Request Body:**
+```json
+{
+  "payload": {
+    "relay": 1,
+    "state": "ON"
+  },
+  "subtopic": "commands"
+}
+```
+Publishes the payload directly to MQTT topic `channels/{channel_id}/{subtopic}` with QoS 1. Subscribed hardware nodes and clients receive the command immediately.
+
+**Response (200 OK):**
+```json
+{
+  "status": "dispatched",
+  "channel_id": 1,
+  "topic": "channels/1/commands",
+  "payload": {
+    "relay": 1,
+    "state": "ON"
+  }
+}
+```
+
+---
+
+### Import Historical Telemetry (CSV)
+```http
+POST /channels/{channel_id}/import
+Authorization: Bearer <jwt_access_token>
+Content-Type: text/csv
+```
+*Can also authenticate via `X-API-Key: tl_write_...`.*
+Accepts generic CSV (`time,temperature,humidity,...`) or ThingSpeak CSV export format (`created_at,entry_id,field1,field2,...`). Auto-registers new channel fields.
+
+**Request Body (Raw text or JSON `{"csv": "..."}`):**
+```csv
+created_at,entry_id,field1,field2
+2026-11-12T00:00:00Z,1,24.5,60.2
+2026-11-12T01:00:00Z,2,25.1,58.9
+```
+
+**Response (200 OK):**
+```json
+{
+  "status": "imported",
+  "channel_id": 1,
+  "points_imported": 2,
+  "fields_discovered": ["field1", "field2"]
 }
 ```
 

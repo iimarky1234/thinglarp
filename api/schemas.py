@@ -98,11 +98,29 @@ class FieldOut(BaseModel):
     label: str | None
     unit: str | None
     value_type: str
+    widget_type: str
     first_seen_at: datetime
 
 class FieldUpdate(BaseModel):
     label: str | None = Field(None, max_length=64)
     unit: str | None = Field(None, max_length=16)
+    widget_type: str | None = Field(None, pattern=r"^(line|gauge|kpi|status)$")
+
+class CommandDispatch(BaseModel):
+    payload: dict[str, Any]
+    subtopic: str | None = Field("commands", pattern=r"^[A-Za-z0-9_.-]{1,64}$")
+
+class CommandDispatchOut(BaseModel):
+    status: str
+    channel_id: int
+    topic: str
+    payload: dict[str, Any]
+
+class ImportResultOut(BaseModel):
+    status: str
+    channel_id: int
+    points_imported: int
+    fields_discovered: list[str]
 
 # -----------------------------------------------------------------------------
 # Device Schemas

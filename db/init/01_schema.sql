@@ -97,6 +97,8 @@ CREATE TABLE IF NOT EXISTS app.channel_fields (
     unit          TEXT,
     value_type    TEXT NOT NULL DEFAULT 'number'
                   CHECK (value_type IN ('number', 'string', 'boolean')),
+    widget_type   TEXT NOT NULL DEFAULT 'line'
+                  CHECK (widget_type IN ('line', 'gauge', 'kpi', 'status')),
     first_seen_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (channel_id, key)
 );

@@ -67,8 +67,8 @@ GRANT USAGE ON SCHEMA app, telemetry, mqtt TO iot_api;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA app TO iot_api;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA app TO iot_api;
 
-GRANT SELECT, DELETE ON telemetry.points TO iot_api;
-GRANT SELECT, DELETE ON telemetry.messages TO iot_api;
+GRANT SELECT, INSERT, DELETE ON telemetry.points TO iot_api;
+GRANT SELECT, INSERT, DELETE ON telemetry.messages TO iot_api;
 GRANT SELECT ON telemetry.points_1m TO iot_api;
 GRANT SELECT ON telemetry.points_1h TO iot_api;
 

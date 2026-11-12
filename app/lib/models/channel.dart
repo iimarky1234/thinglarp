@@ -37,6 +37,7 @@ class ChannelField {
   final String? label;
   final String? unit;
   final String valueType;
+  final String widgetType;
   final DateTime firstSeenAt;
 
   ChannelField({
@@ -46,6 +47,7 @@ class ChannelField {
     this.label,
     this.unit,
     required this.valueType,
+    this.widgetType = 'line',
     required this.firstSeenAt,
   });
 
@@ -57,6 +59,7 @@ class ChannelField {
       label: json['label'] as String?,
       unit: json['unit'] as String?,
       valueType: json['value_type'] as String? ?? 'number',
+      widgetType: json['widget_type'] as String? ?? 'line',
       firstSeenAt: DateTime.parse(json['first_seen_at'] as String),
     );
   }

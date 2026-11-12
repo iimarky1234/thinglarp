@@ -2,6 +2,7 @@
 
 import csv
 import io
+import re
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
@@ -10,7 +11,14 @@ import orjson
 
 from database import get_db
 from mqtt_client import publisher
-from schemas import ChannelTelemetryOut, LatestTelemetryOut, TelemetryPoint
+from schemas import (
+    ChannelTelemetryOut,
+    LatestTelemetryOut,
+    TelemetryPoint,
+    CommandDispatch,
+    CommandDispatchOut,
+    ImportResultOut,
+)
 from security import (
     get_optional_current_user,
     CurrentUser,
@@ -369,3 +377,187 @@ async def export_telemetry(
             media_type="application/json",
             headers={"Content-Disposition": f'attachment; filename="channel_{channel_id}_export.json"'},
         )
+
+
+@router.post("/commands", response_model=CommandDispatchOut, status_code=status.HTTP_200_OK)
+async def dispatch_command(
+    channel_id: int,
+    payload: CommandDispatch,
+    db: Annotated[asyncpg.Connection, Depends(get_db)],
+    x_api_key: Annotated[str | None, Header()] = None,
+    current_user: Annotated[CurrentUser | None, Depends(get_optional_current_user)] = None,
+):
+    """
+    Dispatch a downlink command down to subscribed IoT hardware devices over MQTT.
+    Publishes to topic 'channels/{channel_id}/{subtopic}' (default 'commands').
+    """
+    await authorize_channel_access(channel_id, "write", x_api_key, current_user, db)
+
+    subtopic = payload.subtopic or "commands"
+    topic = f"channels/{channel_id}/{subtopic}"
+    body_bytes = orjson.dumps(payload.payload)
+
+    published = await publisher.publish(topic, body_bytes, qos=1)
+    if not published:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Broker unavailable")
+
+    return CommandDispatchOut(
+        status="dispatched",
+        channel_id=channel_id,
+        topic=topic,
+        payload=payload.payload,
+    )
+
+
+@router.post("/import", response_model=ImportResultOut, status_code=status.HTTP_200_OK)
+async def import_telemetry(
+    channel_id: int,
+    request: Request,
+    db: Annotated[asyncpg.Connection, Depends(get_db)],
+    x_api_key: Annotated[str | None, Header()] = None,
+    current_user: Annotated[CurrentUser | None, Depends(get_optional_current_user)] = None,
+):
+    """
+    Import historical telemetry from CSV data.
+    Supports ThingSpeak format (created_at,entry_id,field1,field2...)
+    or standard format (time,field,value or time,temp,humidity...).
+    """
+    await authorize_channel_access(channel_id, "write", x_api_key, current_user, db)
+
+    body_bytes = await request.body()
+    try:
+        csv_text = body_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        try:
+            csv_text = body_bytes.decode("latin-1")
+        except Exception:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not decode CSV text")
+
+    # If payload is JSON with { "csv": "..." }, extract it
+    stripped = csv_text.strip()
+    if stripped.startswith("{") and stripped.endswith("}"):
+        try:
+            parsed_json = orjson.loads(stripped)
+            if isinstance(parsed_json, dict) and "csv" in parsed_json:
+                csv_text = parsed_json["csv"]
+        except Exception:
+            pass
+
+    reader = csv.reader(io.StringIO(csv_text))
+    rows = list(reader)
+    if not rows or len(rows) < 2:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="CSV must contain a header row and at least one data row")
+
+    header = [h.strip().lower() for h in rows[0]]
+
+    # Detect time column
+    time_idx = None
+    for idx, col in enumerate(header):
+        if col in ("time", "created_at", "timestamp", "datetime", "date"):
+            time_idx = idx
+            break
+    if time_idx is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No timestamp column found (expected 'time', 'created_at', or 'timestamp')")
+
+    # Check if this is narrow format: time, field, value
+    is_narrow = False
+    field_col_idx = None
+    val_col_idx = None
+    if "field" in header and "value" in header:
+        is_narrow = True
+        field_col_idx = header.index("field")
+        val_col_idx = header.index("value")
+
+    # Collect existing fields for this channel
+    existing_fields = await db.fetch("SELECT id, key FROM app.channel_fields WHERE channel_id = $1", channel_id)
+    field_map = {r["key"]: r["id"] for r in existing_fields}
+
+    async def get_or_create_field_id(key: str) -> int:
+        clean_key = re.sub(r'[^A-Za-z0-9_.-]', '_', key)[:64]
+        if clean_key in field_map:
+            return field_map[clean_key]
+        row = await db.fetchrow(
+            """
+            INSERT INTO app.channel_fields (channel_id, key, label, value_type)
+            VALUES ($1, $2, $3, 'number')
+            ON CONFLICT (channel_id, key) DO UPDATE SET channel_id = EXCLUDED.channel_id
+            RETURNING id;
+            """,
+            channel_id,
+            clean_key,
+            clean_key.capitalize(),
+        )
+        fid = row["id"]
+        field_map[clean_key] = fid
+        return fid
+
+    def parse_time(val: str) -> datetime:
+        val = val.strip().replace(" UTC", "+00:00").replace("Z", "+00:00")
+        try:
+            return datetime.fromisoformat(val)
+        except Exception:
+            for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M:%S%z", "%Y-%m-%dT%H:%M:%S", "%Y/%m/%d %H:%M:%S"):
+                try:
+                    dt = datetime.strptime(val, fmt)
+                    if dt.tzinfo is None:
+                        dt = dt.replace(tzinfo=timezone.utc)
+                    return dt
+                except Exception:
+                    continue
+            raise ValueError(f"Unable to parse timestamp: {val}")
+
+    points_to_insert = []
+    discovered_keys = set()
+
+    for row_idx, r in enumerate(rows[1:], start=2):
+        if not r or all(not cell.strip() for cell in r):
+            continue
+        if len(r) <= time_idx:
+            continue
+        try:
+            ts = parse_time(r[time_idx])
+        except Exception:
+            continue
+
+        if is_narrow:
+            if len(r) > max(field_col_idx, val_col_idx):
+                fkey = r[field_col_idx].strip()
+                try:
+                    fval = float(r[val_col_idx].strip())
+                except ValueError:
+                    continue
+                fid = await get_or_create_field_id(fkey)
+                discovered_keys.add(fkey)
+                points_to_insert.append((ts, channel_id, fid, fval))
+        else:
+            for c_idx, cell in enumerate(r):
+                if c_idx == time_idx:
+                    continue
+                col_name = header[c_idx]
+                if col_name in ("entry_id", "id", "#"):
+                    continue
+                val_str = cell.strip()
+                if not val_str:
+                    continue
+                try:
+                    fval = float(val_str)
+                except ValueError:
+                    continue
+                fid = await get_or_create_field_id(col_name)
+                discovered_keys.add(col_name)
+                points_to_insert.append((ts, channel_id, fid, fval))
+
+    if points_to_insert:
+        await db.copy_records_to_table(
+            "points",
+            records=points_to_insert,
+            columns=["time", "channel_id", "field_id", "value"],
+            schema_name="telemetry",
+        )
+
+    return ImportResultOut(
+        status="imported",
+        channel_id=channel_id,
+        points_imported=len(points_to_insert),
+        fields_discovered=sorted(list(discovered_keys)),
+    )

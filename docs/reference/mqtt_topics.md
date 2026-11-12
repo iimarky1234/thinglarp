@@ -12,7 +12,7 @@ All MQTT topics follow strict hierarchical namespaces:
 channels/
 └── {channel_id}/
     ├── data       # High-frequency JSON sensor telemetry
-    ├── command    # Downlink actuator commands (Future)
+    ├── commands   # Downlink actuator commands (relays, triggers, configs)
     └── status     # Last Will and Testament (LWT) & online status
 ```
 
@@ -27,13 +27,15 @@ channels/
 
 | Topic Pattern | Client Identity | Allowed Operations | Condition / Evaluation Logic |
 | :--- | :--- | :--- | :--- |
-| `channels/{id}/data` | Hardware Device (`d_*`) | **Write (`2`)** | Device is mapped to channel `{id}` in `app.devices`. |
+| `channels/{id}/data` | Hardware Device (`d_*`) | **Write (`2`)** | Device is active (`is_active = true`) and scope is `publish` or `pubsub`. |
+| `channels/{id}/data` | Hardware Device (`d_*`) | **Sub (`4`)**, **Read (`1`)** | Device is active and scope is `subscribe` or `pubsub`. |
+| `channels/{id}/commands` | Hardware Device (`d_*`) | **Sub (`4`)**, **Read (`1`)** | Device is active and scope is `subscribe` or `pubsub`. Receives downlink control payloads. |
+| `channels/{id}/status` | Hardware Device (`d_*`) | **Write (`2`)** | Device is active and scope is `publish` or `pubsub`. Used for LWT messages. |
 | `channels/{id}/data` | User Frontend Session (`s_*`) | **Sub (`4`)**, **Read (`1`)** | Channel `{id}` is owned by user or has `is_public = true`. |
-| `channels/{id}/status` | Hardware Device (`d_*`) | **Write (`2`)** | Device is mapped to channel `{id}`. Used for LWT messages. |
 | `channels/{id}/status` | User Frontend Session (`s_*`) | **Sub (`4`)**, **Read (`1`)** | Same as data channel. |
-| `$share/ingest/channels/+/data` | Service Account (`svc_bridge`) | **Sub (`4`)** | Dedicated ingestion bridge shared group. |
-| `#` (All Topics) | Service Account (`svc_bridge`) | **Read (`1`)** | Superuser flag active. |
-| `#` (All Topics) | Service Account (`svc_api`) | **Write (`2`)** | Superuser flag active for HTTP forwarding. |
+| `channels/{id}/commands` | API Service Account (`svc_api`) | **Write (`2`)** | Dispatches HTTP command requests to MQTT. |
+| `$share/ingest/channels/+/data` | Ingestion Bridge (`svc_bridge`) | **Sub (`4`)** | Dedicated ingestion bridge shared consumer group. |
+| `#` (All Topics) | Service Accounts (`svc_bridge`, `svc_api`) | Superuser | System services bypass topic checks. |
 
 ---
 

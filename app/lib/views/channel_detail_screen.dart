@@ -1,8 +1,10 @@
+import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 import '../models/channel.dart';
 import '../models/telemetry.dart';
 import '../providers/channel_provider.dart';
@@ -165,6 +167,341 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
                 if (ctx.mounted) Navigator.pop(ctx);
               },
               child: const Text('Save Changes'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCommandsDialog() {
+    final subtopicCtrl = TextEditingController(text: 'commands');
+    final payloadCtrl = TextEditingController(
+      text: '{\n  "relay": 1,\n  "state": "ON"\n}',
+    );
+    bool isSending = false;
+    String? sendError;
+    String? sendSuccess;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.send_to_mobile, color: Colors.amberAccent),
+              SizedBox(width: 8),
+              Text('Downlink Device Command'),
+            ],
+          ),
+          content: SizedBox(
+            width: 480,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Publish downstream control actions to IoT devices subscribed to this channel.',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: subtopicCtrl,
+                    decoration: InputDecoration(
+                      labelText: 'MQTT Subtopic',
+                      hintText: 'commands',
+                      prefixText: 'channels/${widget.channel.id}/',
+                      border: const OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  const Text('Quick Action Presets:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      ActionChip(
+                        avatar: const Icon(Icons.power, size: 16, color: Colors.greenAccent),
+                        label: const Text('Relay 1 ON', style: TextStyle(fontSize: 12)),
+                        onPressed: () {
+                          setDialogState(() {
+                            payloadCtrl.text = '{\n  "relay": 1,\n  "state": "ON"\n}';
+                          });
+                        },
+                      ),
+                      ActionChip(
+                        avatar: const Icon(Icons.power_off, size: 16, color: Colors.redAccent),
+                        label: const Text('Relay 1 OFF', style: TextStyle(fontSize: 12)),
+                        onPressed: () {
+                          setDialogState(() {
+                            payloadCtrl.text = '{\n  "relay": 1,\n  "state": "OFF"\n}';
+                          });
+                        },
+                      ),
+                      ActionChip(
+                        avatar: const Icon(Icons.restart_alt, size: 16, color: Colors.amberAccent),
+                        label: const Text('Reboot Node', style: TextStyle(fontSize: 12)),
+                        onPressed: () {
+                          setDialogState(() {
+                            payloadCtrl.text = '{\n  "cmd": "reboot",\n  "force": true\n}';
+                          });
+                        },
+                      ),
+                      ActionChip(
+                        avatar: const Icon(Icons.lightbulb, size: 16, color: Colors.cyanAccent),
+                        label: const Text('LED Toggle', style: TextStyle(fontSize: 12)),
+                        onPressed: () {
+                          setDialogState(() {
+                            payloadCtrl.text = '{\n  "action": "toggle_led",\n  "color": "blue"\n}';
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  const Text('JSON Command Payload:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: payloadCtrl,
+                    maxLines: 6,
+                    style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+                    decoration: const InputDecoration(
+                      hintText: '{\n  "key": "value"\n}',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  if (sendError != null) ...[
+                    const SizedBox(height: 8),
+                    Text(sendError!, style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
+                  ],
+                  if (sendSuccess != null) ...[
+                    const SizedBox(height: 8),
+                    Text(sendSuccess!, style: const TextStyle(color: Colors.greenAccent, fontSize: 12)),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton.icon(
+              icon: const Icon(Icons.school_outlined, size: 16),
+              label: const Text('Node Code Tutorial'),
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ApiTutorialScreen(
+                      channel: widget.channel,
+                      initialTabIndex: 3,
+                    ),
+                  ),
+                );
+              },
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Close'),
+            ),
+            ElevatedButton.icon(
+              icon: isSending
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.send, size: 16),
+              label: const Text('Dispatch Command'),
+              onPressed: isSending
+                  ? null
+                  : () async {
+                      setDialogState(() {
+                        sendError = null;
+                        sendSuccess = null;
+                      });
+
+                      final rawText = payloadCtrl.text.trim();
+                      Map<String, dynamic> parsedJson;
+                      try {
+                        parsedJson = jsonDecode(rawText) as Map<String, dynamic>;
+                      } catch (e) {
+                        setDialogState(() {
+                          sendError = 'Invalid JSON: $e';
+                        });
+                        return;
+                      }
+
+                      final subtopic = subtopicCtrl.text.trim().isEmpty ? 'commands' : subtopicCtrl.text.trim();
+
+                      setDialogState(() => isSending = true);
+                      try {
+                        final provider = context.read<ChannelProvider>();
+                        final res = await provider.apiService.sendCommand(
+                          widget.channel.id,
+                          parsedJson,
+                          subtopic: subtopic,
+                        );
+                        setDialogState(() {
+                          isSending = false;
+                          sendSuccess = 'Dispatched to ${res['topic']} successfully!';
+                        });
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Dispatched downlink command to ${res['topic']}')),
+                          );
+                        }
+                      } catch (e) {
+                        setDialogState(() {
+                          isSending = false;
+                          sendError = 'Failed to dispatch: $e';
+                        });
+                      }
+                    },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showImportDialog() {
+    final csvCtrl = TextEditingController();
+    bool isImporting = false;
+    String? statusMsg;
+    bool isSuccess = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.file_upload, color: Colors.cyanAccent),
+              SizedBox(width: 8),
+              Text('Import Historical Data (CSV)'),
+            ],
+          ),
+          content: SizedBox(
+            width: 520,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Paste CSV data from ThingSpeak or generic IoT platforms. Field columns will be automatically detected and mapped.',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.auto_fix_high, size: 16),
+                        label: const Text('Load Sample ThingSpeak CSV', style: TextStyle(fontSize: 12)),
+                        onPressed: () {
+                          setDialogState(() {
+                            final now = DateTime.now().toUtc();
+                            final df = DateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+                            csvCtrl.text =
+                                'created_at,entry_id,field1,field2\n'
+                                '${df.format(now.subtract(const Duration(minutes: 50)))},1,24.5,60.2\n'
+                                '${df.format(now.subtract(const Duration(minutes: 40)))},2,25.1,58.9\n'
+                                '${df.format(now.subtract(const Duration(minutes: 30)))},3,23.8,62.1\n'
+                                '${df.format(now.subtract(const Duration(minutes: 20)))},4,22.9,64.0\n'
+                                '${df.format(now.subtract(const Duration(minutes: 10)))},5,23.2,63.5\n'
+                                '${df.format(now)},6,24.0,61.0';
+                          });
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.clear_all, size: 16),
+                        label: const Text('Clear', style: TextStyle(fontSize: 12)),
+                        onPressed: () => setDialogState(() => csvCtrl.clear()),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: csvCtrl,
+                    maxLines: 8,
+                    style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                    decoration: const InputDecoration(
+                      hintText: 'created_at,field1,field2\n2026-11-12T00:00:00Z,23.5,65.0\n...',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  if (statusMsg != null) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      statusMsg!,
+                      style: TextStyle(
+                        color: isSuccess ? Colors.greenAccent : Colors.redAccent,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton.icon(
+              icon: isImporting
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.upload, size: 16),
+              label: const Text('Start Import'),
+              onPressed: isImporting
+                  ? null
+                  : () async {
+                      final text = csvCtrl.text.trim();
+                      if (text.isEmpty) {
+                        setDialogState(() {
+                          statusMsg = 'Please paste CSV content before importing.';
+                          isSuccess = false;
+                        });
+                        return;
+                      }
+
+                      setDialogState(() {
+                        isImporting = true;
+                        statusMsg = null;
+                      });
+
+                      try {
+                        final provider = context.read<ChannelProvider>();
+                        final res = await provider.apiService.importTelemetryCsv(widget.channel.id, text);
+                        final count = res['points_imported'] ?? 0;
+                        final fields = (res['fields_discovered'] as List?)?.join(', ') ?? '';
+
+                        await Future.wait([
+                          provider.loadFields(widget.channel.id),
+                          provider.loadHistoricalData(widget.channel.id, resolution: provider.currentResolution),
+                          provider.loadLatestSnapshot(widget.channel.id),
+                        ]);
+
+                        setDialogState(() {
+                          isImporting = false;
+                          isSuccess = true;
+                          statusMsg = 'Success! Imported $count points across fields: $fields';
+                        });
+
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Successfully imported $count points ($fields)')),
+                          );
+                        }
+                      } catch (e) {
+                        setDialogState(() {
+                          isImporting = false;
+                          isSuccess = false;
+                          statusMsg = 'Import failed: $e';
+                        });
+                      }
+                    },
             ),
           ],
         ),
@@ -530,6 +867,11 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
         title: Text(widget.channel.name),
         actions: [
           IconButton(
+            icon: const Icon(Icons.send_to_mobile, color: Colors.amberAccent),
+            tooltip: 'Downlink Commands',
+            onPressed: _showCommandsDialog,
+          ),
+          IconButton(
             icon: const Icon(Icons.school_outlined, color: Colors.cyanAccent),
             tooltip: 'API Tutorials & Code Generator',
             onPressed: () {
@@ -546,6 +888,7 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
             tooltip: 'Channel Actions',
             onSelected: (val) {
               if (val == 'export') _showExportDialog();
+              if (val == 'import') _showImportDialog();
               if (val == 'clear') _showClearDataDialog();
             },
             itemBuilder: (context) => [
@@ -556,6 +899,16 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
                     Icon(Icons.download, size: 20, color: Colors.cyanAccent),
                     SizedBox(width: 10),
                     Text('Download / Export Data'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'import',
+                child: Row(
+                  children: [
+                    Icon(Icons.upload_file, size: 20, color: Colors.tealAccent),
+                    SizedBox(width: 10),
+                    Text('Import Data (CSV)'),
                   ],
                 ),
               ),
@@ -702,7 +1055,7 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
             const SizedBox(height: 24),
           ],
 
-          // Time-series Charts for each numeric field
+          // Multi-Type Dynamic Widget Cards for each numeric field
           if (provider.chartPoints.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 40),
@@ -721,18 +1074,106 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
                   channelId: widget.channel.id,
                   key: fieldKey,
                   valueType: 'number',
+                  widgetType: 'line',
                   firstSeenAt: DateTime.now(),
                 ),
               );
 
-              return _TimeSeriesChartCard(
-                fieldLabel: fieldMeta.displayName,
-                unit: fieldMeta.unit,
-                points: points,
-              );
+              final menu = _buildWidgetTypeMenu(context, fieldMeta);
+
+              switch (fieldMeta.widgetType) {
+                case 'gauge':
+                  return _RadialGaugeCard(
+                    field: fieldMeta,
+                    points: points,
+                    menuButton: menu,
+                  );
+                case 'kpi':
+                  return _KpiMetricCard(
+                    field: fieldMeta,
+                    points: points,
+                    menuButton: menu,
+                  );
+                case 'status':
+                  return _StatusIndicatorCard(
+                    field: fieldMeta,
+                    points: points,
+                    menuButton: menu,
+                  );
+                case 'line':
+                default:
+                  return _TimeSeriesChartCard(
+                    fieldLabel: fieldMeta.displayName,
+                    unit: fieldMeta.unit,
+                    points: points,
+                    menuButton: menu,
+                  );
+              }
             }),
         ],
       ),
+    );
+  }
+
+  Widget _buildWidgetTypeMenu(BuildContext context, ChannelField field) {
+    if (field.id <= 0) return const SizedBox();
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.tune, size: 18, color: Colors.grey),
+      tooltip: 'Change Widget Type',
+      onSelected: (newType) async {
+        try {
+          final provider = context.read<ChannelProvider>();
+          await provider.updateFieldWidgetType(field.channelId, field.id, newType);
+        } catch (e) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Failed to update widget type: $e')),
+            );
+          }
+        }
+      },
+      itemBuilder: (ctx) => [
+        const PopupMenuItem(
+          value: 'line',
+          child: Row(
+            children: [
+              Icon(Icons.show_chart, size: 18, color: Colors.blueAccent),
+              SizedBox(width: 8),
+              Text('Line Chart'),
+            ],
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'gauge',
+          child: Row(
+            children: [
+              Icon(Icons.speed, size: 18, color: Colors.cyanAccent),
+              SizedBox(width: 8),
+              Text('Radial Gauge'),
+            ],
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'kpi',
+          child: Row(
+            children: [
+              Icon(Icons.pin_outlined, size: 18, color: Colors.amberAccent),
+              SizedBox(width: 8),
+              Text('KPI Metric Card'),
+            ],
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'status',
+          child: Row(
+            children: [
+              Icon(Icons.radio_button_checked, size: 18, color: Colors.greenAccent),
+              SizedBox(width: 8),
+              Text('Status / LED Indicator'),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -1031,11 +1472,13 @@ class _TimeSeriesChartCard extends StatelessWidget {
   final String fieldLabel;
   final String? unit;
   final List<TelemetryPoint> points;
+  final Widget? menuButton;
 
   const _TimeSeriesChartCard({
     required this.fieldLabel,
     this.unit,
     required this.points,
+    this.menuButton,
   });
 
   @override
@@ -1062,14 +1505,20 @@ class _TimeSeriesChartCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  fieldLabel + (unit != null ? ' ($unit)' : ''),
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                Expanded(
+                  child: Text(
+                    fieldLabel + (unit != null ? ' ($unit)' : ''),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                 ),
                 Text(
                   'Now: ${latestVal.toStringAsFixed(2)}',
                   style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blueAccent),
                 ),
+                if (menuButton != null) ...[
+                  const SizedBox(width: 8),
+                  menuButton!,
+                ],
               ],
             ),
             const SizedBox(height: 4),
@@ -1103,6 +1552,439 @@ class _TimeSeriesChartCard extends StatelessWidget {
                   ],
                 ),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RadialGaugeCard extends StatelessWidget {
+  final ChannelField field;
+  final List<TelemetryPoint> points;
+  final Widget? menuButton;
+
+  const _RadialGaugeCard({
+    required this.field,
+    required this.points,
+    this.menuButton,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final double latestVal = points.isNotEmpty ? points.last.value : 0.0;
+    final double minVal = points.isNotEmpty
+        ? points.map((p) => p.value).reduce((a, b) => a < b ? a : b)
+        : 0.0;
+    final double maxVal = points.isNotEmpty
+        ? points.map((p) => p.value).reduce((a, b) => a > b ? a : b)
+        : (latestVal > 0 ? latestVal * 1.5 : 100.0);
+
+    final range = (maxVal - minVal);
+    final double pct = range > 0 ? ((latestVal - minVal) / range).clamp(0.0, 1.0) : 0.5;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      const Icon(Icons.speed, size: 20, color: Colors.cyanAccent),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          field.displayName + (field.unit != null ? ' (${field.unit})' : ''),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                ?menuButton,
+              ],
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 180,
+              width: 220,
+              child: CustomPaint(
+                painter: _GaugePainter(
+                  percent: pct,
+                  valueText: latestVal.toStringAsFixed(1),
+                  unitText: field.unit ?? '',
+                  minText: minVal.toStringAsFixed(1),
+                  maxText: maxVal.toStringAsFixed(1),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Min: ${minVal.toStringAsFixed(2)}  •  Max: ${maxVal.toStringAsFixed(2)}  •  Samples: ${points.length}',
+              style: const TextStyle(fontSize: 11, color: Colors.grey),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GaugePainter extends CustomPainter {
+  final double percent;
+  final String valueText;
+  final String unitText;
+  final String minText;
+  final String maxText;
+
+  _GaugePainter({
+    required this.percent,
+    required this.valueText,
+    required this.unitText,
+    required this.minText,
+    required this.maxText,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height * 0.6);
+    final radius = math.min(size.width / 2, size.height * 0.6) - 14;
+
+    const startAngle = 135 * (math.pi / 180);
+    const sweepAngle = 270 * (math.pi / 180);
+
+    // Background Arc
+    final bgPaint = Paint()
+      ..color = Colors.grey.withValues(alpha: 0.2)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 14
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      startAngle,
+      sweepAngle,
+      false,
+      bgPaint,
+    );
+
+    // Active Gradient Arc
+    final activePaint = Paint()
+      ..shader = const SweepGradient(
+        colors: [Colors.tealAccent, Colors.cyanAccent, Colors.blueAccent],
+        startAngle: 0.0,
+        endAngle: math.pi * 2,
+      ).createShader(Rect.fromCircle(center: center, radius: radius))
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 14
+      ..strokeCap = StrokeCap.round;
+
+    final currentSweep = sweepAngle * percent.clamp(0.01, 1.0);
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      startAngle,
+      currentSweep,
+      false,
+      activePaint,
+    );
+
+    // Value Text
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: valueText,
+        style: const TextStyle(
+          fontSize: 26,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    textPainter.paint(
+      canvas,
+      Offset(center.dx - textPainter.width / 2, center.dy - textPainter.height / 2 - 6),
+    );
+
+    // Unit Text
+    if (unitText.isNotEmpty) {
+      final unitPainter = TextPainter(
+        text: TextSpan(
+          text: unitText,
+          style: const TextStyle(fontSize: 12, color: Colors.grey),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      unitPainter.paint(
+        canvas,
+        Offset(center.dx - unitPainter.width / 2, center.dy + textPainter.height / 2 - 4),
+      );
+    }
+
+    // Min / Max labels at arc tips
+    final minPainter = TextPainter(
+      text: TextSpan(text: minText, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    minPainter.paint(canvas, Offset(center.dx - radius - 10, center.dy + radius * 0.45));
+
+    final maxPainter = TextPainter(
+      text: TextSpan(text: maxText, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    maxPainter.paint(canvas, Offset(center.dx + radius - maxPainter.width + 10, center.dy + radius * 0.45));
+  }
+
+  @override
+  bool shouldRepaint(covariant _GaugePainter oldDelegate) {
+    return oldDelegate.percent != percent ||
+        oldDelegate.valueText != valueText ||
+        oldDelegate.unitText != unitText;
+  }
+}
+
+class _KpiMetricCard extends StatelessWidget {
+  final ChannelField field;
+  final List<TelemetryPoint> points;
+  final Widget? menuButton;
+
+  const _KpiMetricCard({
+    required this.field,
+    required this.points,
+    this.menuButton,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final double latestVal = points.isNotEmpty ? points.last.value : 0.0;
+    final double minVal = points.isNotEmpty
+        ? points.map((p) => p.value).reduce((a, b) => a < b ? a : b)
+        : 0.0;
+    final double maxVal = points.isNotEmpty
+        ? points.map((p) => p.value).reduce((a, b) => a > b ? a : b)
+        : 0.0;
+    final double avgVal = points.isNotEmpty
+        ? points.map((p) => p.value).reduce((a, b) => a + b) / points.length
+        : 0.0;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.amberAccent.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.pin_outlined, size: 20, color: Colors.amberAccent),
+                      ),
+                      const SizedBox(width: 10),
+                      Flexible(
+                        child: Text(
+                          field.displayName,
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                ?menuButton,
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(
+                  latestVal.toStringAsFixed(2),
+                  style: const TextStyle(
+                    fontSize: 38,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.amberAccent,
+                    letterSpacing: -1,
+                  ),
+                ),
+                if (field.unit != null) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    field.unit!,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.grey),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _StatItem(label: 'Min', value: minVal.toStringAsFixed(2), color: Colors.blueAccent),
+                  _StatItem(label: 'Average', value: avgVal.toStringAsFixed(2), color: Colors.cyanAccent),
+                  _StatItem(label: 'Max', value: maxVal.toStringAsFixed(2), color: Colors.orangeAccent),
+                  _StatItem(label: 'Samples', value: points.length.toString(), color: Colors.white70),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatItem extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _StatItem({required this.label, required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+        const SizedBox(height: 2),
+        Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: color)),
+      ],
+    );
+  }
+}
+
+class _StatusIndicatorCard extends StatelessWidget {
+  final ChannelField field;
+  final List<TelemetryPoint> points;
+  final Widget? menuButton;
+
+  const _StatusIndicatorCard({
+    required this.field,
+    required this.points,
+    this.menuButton,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final double latestVal = points.isNotEmpty ? points.last.value : 0.0;
+    final bool isActive = latestVal > 0.0;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: (isActive ? Colors.greenAccent : Colors.redAccent).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          isActive ? Icons.radio_button_checked : Icons.radio_button_off,
+                          size: 20,
+                          color: isActive ? Colors.greenAccent : Colors.redAccent,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Flexible(
+                        child: Text(
+                          field.displayName,
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                ?menuButton,
+              ],
+            ),
+            const SizedBox(height: 20),
+            Center(
+              child: Column(
+                children: [
+                  Container(
+                    width: 90,
+                    height: 90,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: (isActive ? Colors.greenAccent : Colors.redAccent).withValues(alpha: 0.15),
+                      border: Border.all(
+                        color: isActive ? Colors.greenAccent : Colors.redAccent,
+                        width: 3,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: (isActive ? Colors.greenAccent : Colors.redAccent).withValues(alpha: 0.3),
+                          blurRadius: 18,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      isActive ? Icons.power : Icons.power_off,
+                      size: 42,
+                      color: isActive ? Colors.greenAccent : Colors.redAccent,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    isActive ? 'STATE: ACTIVE / ON' : 'STATE: INACTIVE / OFF',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
+                      color: isActive ? Colors.greenAccent : Colors.redAccent,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Raw Value: ${latestVal.toStringAsFixed(2)}${field.unit != null ? " ${field.unit}" : ""}',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Total Samples Recorded: ${points.length}',
+              style: const TextStyle(fontSize: 11, color: Colors.grey),
             ),
           ],
         ),

@@ -317,6 +317,107 @@ mosquitto_sub -h "mqtt.iimarky123.io.vn" -p 8883 \
 
 ---
 
+## 📡 Tutorial 4: Downlink Device Remote Control & Actuation
+
+ThingLarp supports bidirectional IoT communication. You can dispatch commands from the web/mobile app or HTTP API down to your edge devices (ESP32, Raspberry Pi, relays, motors) in real time.
+
+### How Downlink Dispatch Works
+1. You make an HTTP request to `POST /channels/{channel_id}/commands`.
+2. The ThingLarp API publishes the payload to MQTT topic `channels/{channel_id}/{subtopic}` (default: `channels/{channel_id}/commands`) at QoS 1.
+3. Connected devices subscribed to this topic immediately receive the JSON payload and execute the requested action.
+
+### Dispatching via cURL
+```bash
+curl -X POST "https://api.iimarky123.io.vn/channels/1/commands" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: tl_write_YOUR_KEY_HERE" \
+  -d '{
+    "payload": {
+      "relay": 1,
+      "state": "ON"
+    },
+    "subtopic": "commands"
+  }'
+```
+
+### Receiving Commands on ESP32 (Arduino C++)
+Make sure the provisioned device scope is set to `subscribe` or `pubsub`:
+```cpp
+void callback(char* topic, byte* payload, unsigned int length) {
+  StaticJsonDocument<256> doc;
+  deserializeJson(doc, payload, length);
+
+  if (doc.containsKey("relay")) {
+    int relayNum = doc["relay"];
+    const char* state = doc["state"];
+    if (strcmp(state, "ON") == 0) {
+      digitalWrite(RELAY_PIN, HIGH);
+    } else {
+      digitalWrite(RELAY_PIN, LOW);
+    }
+  }
+}
+
+// In setup / reconnect logic:
+client.subscribe("channels/1/commands", 1);
+```
+
+### Receiving Commands in Python
+```python
+import paho.mqtt.client as mqtt
+import json
+
+def on_message(client, userdata, msg):
+    cmd = json.loads(msg.payload.decode())
+    print(f"Received command on {msg.topic}: {cmd}")
+    if cmd.get("relay") == 1 and cmd.get("state") == "ON":
+        print("Actuator: Turning Relay ON!")
+
+client = mqtt.Client()
+client.tls_set()
+client.username_pw_set("d_esp32_node", "YOUR_DEVICE_PASSWORD")
+client.on_message = on_message
+client.connect("mqtt.iimarky123.io.vn", 8883)
+client.subscribe("channels/1/commands", qos=1)
+client.loop_forever()
+```
+
+---
+
+## 📥 Tutorial 5: Data Migration & CSV Import Tool
+
+Have existing historical telemetry from ThingSpeak or another platform? ThingLarp provides an automated CSV import engine that parses historical timestamps and registers all discovered fields in TimescaleDB.
+
+### Supported CSV Formats
+1. **ThingSpeak Export Format:**
+   ```csv
+   created_at,entry_id,field1,field2
+   2026-11-12T00:00:00Z,1,24.5,60.2
+   2026-11-12T01:00:00Z,2,25.1,58.9
+   ```
+2. **Standard Time-Series Format:**
+   ```csv
+   time,temperature,humidity,lux
+   2026-11-12 12:00:00,24.5,60.2,450
+   2026-11-12 12:05:00,25.1,58.9,460
+   ```
+
+### Importing via cURL
+```bash
+curl -X POST "https://api.iimarky123.io.vn/channels/1/import" \
+  -H "Content-Type: text/csv" \
+  -H "X-API-Key: tl_write_YOUR_KEY_HERE" \
+  --data-binary @export.csv
+```
+
+### Importing via the App UI
+1. Open the Channel Dashboard.
+2. Tap the top-right menu (**`⋮`**) and select **Import Data (CSV)**.
+3. Click **Load Sample ThingSpeak CSV** to test or paste your exported CSV text directly.
+4. Tap **Start Import** — your charts and snapshot metrics will update immediately!
+
+---
+
 ## ❓ HTTP Status Codes & Troubleshooting
 
 | HTTP Code | Meaning | Common Cause & Solution |

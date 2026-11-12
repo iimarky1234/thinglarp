@@ -1395,7 +1395,7 @@
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>channels/
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>└── {channel_id}/
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    ├── data       # High-frequency JSON sensor telemetry
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    ├── command    # Downlink actuator commands (Future)
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    ├── commands   # Downlink actuator commands (relays, triggers, configs)
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    └── status     # Last Will and Testament (LWT) &amp; online status
 </span></code></pre></div>
 <hr />
@@ -1418,7 +1418,25 @@
 <td style="text-align: left;"><code>channels/{id}/data</code></td>
 <td style="text-align: left;">Hardware Device (<code>d_*</code>)</td>
 <td style="text-align: left;"><strong>Write (<code>2</code>)</strong></td>
-<td style="text-align: left;">Device is mapped to channel <code>{id}</code> in <code>app.devices</code>.</td>
+<td style="text-align: left;">Device is active (<code>is_active = true</code>) and scope is <code>publish</code> or <code>pubsub</code>.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>channels/{id}/data</code></td>
+<td style="text-align: left;">Hardware Device (<code>d_*</code>)</td>
+<td style="text-align: left;"><strong>Sub (<code>4</code>)</strong>, <strong>Read (<code>1</code>)</strong></td>
+<td style="text-align: left;">Device is active and scope is <code>subscribe</code> or <code>pubsub</code>.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>channels/{id}/commands</code></td>
+<td style="text-align: left;">Hardware Device (<code>d_*</code>)</td>
+<td style="text-align: left;"><strong>Sub (<code>4</code>)</strong>, <strong>Read (<code>1</code>)</strong></td>
+<td style="text-align: left;">Device is active and scope is <code>subscribe</code> or <code>pubsub</code>. Receives downlink control payloads.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>channels/{id}/status</code></td>
+<td style="text-align: left;">Hardware Device (<code>d_*</code>)</td>
+<td style="text-align: left;"><strong>Write (<code>2</code>)</strong></td>
+<td style="text-align: left;">Device is active and scope is <code>publish</code> or <code>pubsub</code>. Used for LWT messages.</td>
 </tr>
 <tr>
 <td style="text-align: left;"><code>channels/{id}/data</code></td>
@@ -1428,33 +1446,27 @@
 </tr>
 <tr>
 <td style="text-align: left;"><code>channels/{id}/status</code></td>
-<td style="text-align: left;">Hardware Device (<code>d_*</code>)</td>
-<td style="text-align: left;"><strong>Write (<code>2</code>)</strong></td>
-<td style="text-align: left;">Device is mapped to channel <code>{id}</code>. Used for LWT messages.</td>
-</tr>
-<tr>
-<td style="text-align: left;"><code>channels/{id}/status</code></td>
 <td style="text-align: left;">User Frontend Session (<code>s_*</code>)</td>
 <td style="text-align: left;"><strong>Sub (<code>4</code>)</strong>, <strong>Read (<code>1</code>)</strong></td>
 <td style="text-align: left;">Same as data channel.</td>
 </tr>
 <tr>
-<td style="text-align: left;"><code>$share/ingest/channels/+/data</code></td>
-<td style="text-align: left;">Service Account (<code>svc_bridge</code>)</td>
-<td style="text-align: left;"><strong>Sub (<code>4</code>)</strong></td>
-<td style="text-align: left;">Dedicated ingestion bridge shared group.</td>
-</tr>
-<tr>
-<td style="text-align: left;"><code>#</code> (All Topics)</td>
-<td style="text-align: left;">Service Account (<code>svc_bridge</code>)</td>
-<td style="text-align: left;"><strong>Read (<code>1</code>)</strong></td>
-<td style="text-align: left;">Superuser flag active.</td>
-</tr>
-<tr>
-<td style="text-align: left;"><code>#</code> (All Topics)</td>
-<td style="text-align: left;">Service Account (<code>svc_api</code>)</td>
+<td style="text-align: left;"><code>channels/{id}/commands</code></td>
+<td style="text-align: left;">API Service Account (<code>svc_api</code>)</td>
 <td style="text-align: left;"><strong>Write (<code>2</code>)</strong></td>
-<td style="text-align: left;">Superuser flag active for HTTP forwarding.</td>
+<td style="text-align: left;">Dispatches HTTP command requests to MQTT.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>$share/ingest/channels/+/data</code></td>
+<td style="text-align: left;">Ingestion Bridge (<code>svc_bridge</code>)</td>
+<td style="text-align: left;"><strong>Sub (<code>4</code>)</strong></td>
+<td style="text-align: left;">Dedicated ingestion bridge shared consumer group.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>#</code> (All Topics)</td>
+<td style="text-align: left;">Service Accounts (<code>svc_bridge</code>, <code>svc_api</code>)</td>
+<td style="text-align: left;">Superuser</td>
+<td style="text-align: left;">System services bypass topic checks.</td>
 </tr>
 </tbody>
 </table>

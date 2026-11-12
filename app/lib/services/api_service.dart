@@ -118,11 +118,22 @@ class ApiService {
     throw Exception('Failed to load fields');
   }
 
-  Future<ChannelField> updateField(int channelId, int fieldId, String? label, String? unit) async {
+  Future<ChannelField> updateField(
+    int channelId,
+    int fieldId, {
+    String? label,
+    String? unit,
+    String? widgetType,
+  }) async {
+    final body = <String, dynamic>{};
+    if (label != null) body['label'] = label;
+    if (unit != null) body['unit'] = unit;
+    if (widgetType != null) body['widget_type'] = widgetType;
+
     final res = await http.patch(
       Uri.parse('${config.apiUrl}/channels/$channelId/fields/$fieldId'),
       headers: _headers,
-      body: jsonEncode({'label': label, 'unit': unit}),
+      body: jsonEncode(body),
     );
     if (res.statusCode == 200) {
       return ChannelField.fromJson(jsonDecode(res.body));
@@ -320,6 +331,58 @@ class ApiService {
       return res.body;
     }
     final err = jsonDecode(res.body)['detail'] ?? 'Failed to export telemetry';
+    throw Exception(err);
+  }
+
+  Future<Map<String, dynamic>> sendCommand(
+    int channelId,
+    Map<String, dynamic> payload, {
+    String subtopic = 'commands',
+    String? apiKey,
+  }) async {
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      if (apiKey != null && apiKey.isNotEmpty)
+        'X-API-Key': apiKey
+      else if (accessToken != null)
+        'Authorization': 'Bearer $accessToken',
+    };
+    final res = await http.post(
+      Uri.parse('${config.apiUrl}/channels/$channelId/commands'),
+      headers: headers,
+      body: jsonEncode({
+        'payload': payload,
+        'subtopic': subtopic,
+      }),
+    );
+    if (res.statusCode == 200) {
+      return jsonDecode(res.body) as Map<String, dynamic>;
+    }
+    final err = jsonDecode(res.body)['detail'] ?? 'Failed to dispatch command';
+    throw Exception(err);
+  }
+
+  Future<Map<String, dynamic>> importTelemetryCsv(
+    int channelId,
+    String csvData, {
+    String? apiKey,
+  }) async {
+    final headers = <String, String>{
+      'Content-Type': 'text/csv',
+      if (apiKey != null && apiKey.isNotEmpty)
+        'X-API-Key': apiKey
+      else if (accessToken != null)
+        'Authorization': 'Bearer $accessToken',
+    };
+    final res = await http.post(
+      Uri.parse('${config.apiUrl}/channels/$channelId/import'),
+      headers: headers,
+      body: csvData,
+    );
+    if (res.statusCode == 200) {
+      return jsonDecode(res.body) as Map<String, dynamic>;
+    }
+    final err = jsonDecode(res.body)['detail'] ?? 'Failed to import telemetry';
     throw Exception(err);
   }
 
