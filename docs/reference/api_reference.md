@@ -231,3 +231,83 @@ Content-Type: application/json
   "battery_v": 3.78
 }
 ```
+
+---
+
+## Administration Endpoints
+
+*Note: All `/admin/*` endpoints require the authenticated user to have `is_admin = true`.*
+
+### List All Users
+```http
+GET /admin/users
+```
+**Response (200 OK):**
+```json
+[
+  {
+    "id": 1,
+    "username": "tester",
+    "is_active": true,
+    "is_admin": false,
+    "created_at": "2026-11-12T04:38:34Z",
+    "channel_count": 2,
+    "device_count": 3
+  }
+]
+```
+
+---
+
+### Create User
+```http
+POST /admin/users
+```
+**Request Body:**
+```json
+{
+  "username": "charlie",
+  "password": "Password123!",
+  "is_admin": false
+}
+```
+
+---
+
+### Update User (Toggle Active / Role / Reset Password)
+```http
+PATCH /admin/users/{user_id}
+```
+**Request Body:**
+```json
+{
+  "is_active": false,
+  "is_admin": true,
+  "password": "NewSecurePassword123!"
+}
+```
+
+---
+
+### Delete User
+```http
+DELETE /admin/users/{user_id}
+```
+**Response (204 No Content)**
+
+---
+
+### System Statistics
+```http
+GET /admin/stats
+```
+**Response (200 OK):**
+```json
+{
+  "total_users": 15,
+  "active_users": 14,
+  "total_channels": 42,
+  "total_devices": 98,
+  "total_points": 1450200
+}
+```

@@ -55,20 +55,21 @@ You should see 5 running containers:
 
 | Container Name | Service | Status | Exposed Ports |
 | :--- | :--- | :--- | :--- |
-| `iot_timescaledb` | TimescaleDB | Up (healthy) | `5432` (internal) |
-| `iot_mosquitto` | Mosquitto | Up | `1883`, `9001` |
+| `iot_traefik` | Traefik v3 | Up | **`80`, `443`, `8883` (Sole Public Ingress)**, `127.0.0.1:8080` |
+| `iot_mosquitto` | Mosquitto | Up | `1883`, `9001` (internal Docker networks only) |
+| `iot_api` | FastAPI Gateway | Up | `8000` (internal Docker networks only) |
 | `iot_bridge` | Python Bridge | Up | internal |
-| `iot_api` | FastAPI Gateway | Up | `8000` |
-| `iot_traefik` | Traefik v3 | Up | `80`, `443`, `8883`, `8080` |
+| `iot_timescaledb` | TimescaleDB | Up (healthy) | `5432` (isolated internal network) |
 
 ---
 
 ## 3. Verify System Health
 
-Run an HTTP health check on the API Gateway:
+Run an HTTP health check through Traefik:
 
 ```bash
-curl http://localhost:8000/health
+# Direct via Traefik (using domain host header)
+curl -H "Host: ${API_DOMAIN:-api.example.com}" http://localhost/health
 ```
 
 Expected response:
