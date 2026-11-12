@@ -28,7 +28,7 @@ services:
       - "80:80"       # HTTP (redirects to HTTPS)
       - "443:443"     # HTTPS (API + MQTT over WebSockets)
       - "8883:8883"   # MQTTS (TCP TLS for ESP32 and mobile)
-      - "8080:8080"   # Traefik dashboard
+      - "127.0.0.1:8080:8080" # Traefik dashboard (Localhost only)
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
@@ -65,8 +65,6 @@ services:
     image: iegomez/mosquitto-go-auth:latest
     container_name: iot_mosquitto
     restart: unless-stopped
-    ports:
-      - "1883:1883"
     volumes:
       - ./mosquitto/mosquitto.conf:/etc/mosquitto/mosquitto.conf:ro
       - mosquitto_data:/var/lib/mosquitto
@@ -123,8 +121,8 @@ services:
       context: ./api
     container_name: iot_api
     restart: unless-stopped
-    ports:
-      - "8000:8000"
+    volumes:
+      - ./api:/app
     environment:
       DB_HOST: timescaledb
       DB_PORT: 5432
