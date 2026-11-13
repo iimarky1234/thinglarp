@@ -101,29 +101,53 @@ async def publish_telemetry(
     return {"status": "published", "channel_id": channel_id}
 
 
+_RESOLUTION_SOURCES: dict[str, tuple[str, str, str]] = {
+    "raw": (
+        "telemetry.points",
+        "time",
+        "value, NULL::double precision AS min_v, NULL::double precision AS max_v",
+    ),
+    "1m": ("telemetry.points_1m", "bucket", "avg_v AS value, min_v, max_v"),
+    "1h": ("telemetry.points_1h", "bucket", "avg_v AS value, min_v, max_v"),
+}
+
+
 @router.get("/data", response_model=ChannelTelemetryOut)
 async def query_telemetry(
     channel_id: int,
     db: Annotated[asyncpg.Connection, Depends(get_db)],
     fields: str | None = Query(None, description="Comma-separated field keys (e.g. temp,humidity)"),
-    start: datetime | None = Query(None, description="Start time (defaults to -24h)"),
+    start: datetime | None = Query(None, description="Start time (defaults to -24h unless all_time=true)"),
     end: datetime | None = Query(None, description="End time (defaults to now)"),
+    all_time: bool = Query(False, description="Query full history instead of defaulting start to -24h"),
     resolution: str = Query("auto", pattern=r"^(auto|raw|1m|1h)$"),
-    limit: int | None = Query(None, ge=1, le=5000, description="Maximum points to return per field"),
+    limit: int | None = Query(None, ge=1, le=10000, description="Maximum newest points per field (max 10000)"),
     x_api_key: Annotated[str | None, Header()] = None,
     current_user: Annotated[CurrentUser | None, Depends(get_optional_current_user)] = None,
 ):
-    """Query time-series telemetry with automated downsampling."""
+    """Query newest time-series telemetry points per field with automated downsampling."""
     await authorize_channel_access(channel_id, "read", x_api_key, current_user, db)
 
     now = datetime.now(timezone.utc)
     end_time = end or now
-    start_time = start or (end_time - timedelta(hours=24))
+    if start is not None:
+        start_time: datetime | None = start
+    elif all_time:
+        start_time = None
+    else:
+        start_time = end_time - timedelta(hours=24)
 
     # Determine resolution
     chosen_resolution = resolution
     if resolution == "auto":
-        duration = end_time - start_time
+        if start_time is None:
+            min_time = await db.fetchval(
+                "SELECT min(time) FROM telemetry.points WHERE channel_id = $1",
+                channel_id,
+            )
+            duration = (end_time - min_time) if min_time else timedelta(0)
+        else:
+            duration = end_time - start_time
         if duration <= timedelta(hours=6):
             chosen_resolution = "raw"
         elif duration <= timedelta(days=30):
@@ -152,46 +176,38 @@ async def query_telemetry(
     field_ids = list(field_map.keys())
     result_fields: dict[str, list[TelemetryPoint]] = {key: [] for key in field_map.values()}
 
-    if chosen_resolution == "raw":
-        query = """
-            SELECT time, field_id, value
-            FROM telemetry.points
-            WHERE channel_id = $1 AND field_id = ANY($2::int[]) AND time >= $3 AND time <= $4
-            ORDER BY time ASC;
-        """
-        rows = await db.fetch(query, channel_id, field_ids, start_time, end_time)
-        for r in rows:
-            key = field_map[r["field_id"]]
-            if limit is None or len(result_fields[key]) < limit:
-                result_fields[key].append(TelemetryPoint(time=r["time"], value=r["value"]))
-    elif chosen_resolution == "1m":
-        query = """
-            SELECT bucket AS time, field_id, avg_v AS value, min_v, max_v
-            FROM telemetry.points_1m
-            WHERE channel_id = $1 AND field_id = ANY($2::int[]) AND bucket >= $3 AND bucket <= $4
-            ORDER BY bucket ASC;
-        """
-        rows = await db.fetch(query, channel_id, field_ids, start_time, end_time)
-        for r in rows:
-            key = field_map[r["field_id"]]
-            if limit is None or len(result_fields[key]) < limit:
-                result_fields[key].append(
-                    TelemetryPoint(time=r["time"], value=r["value"], min=r["min_v"], max=r["max_v"])
-                )
-    else: # 1h
-        query = """
-            SELECT bucket_1h AS time, field_id, avg_v AS value, min_v, max_v
-            FROM telemetry.points_1h
-            WHERE channel_id = $1 AND field_id = ANY($2::int[]) AND bucket_1h >= $3 AND bucket_1h <= $4
-            ORDER BY bucket_1h ASC;
-        """
-        rows = await db.fetch(query, channel_id, field_ids, start_time, end_time)
-        for r in rows:
-            key = field_map[r["field_id"]]
-            if limit is None or len(result_fields[key]) < limit:
-                result_fields[key].append(
-                    TelemetryPoint(time=r["time"], value=r["value"], min=r["min_v"], max=r["max_v"])
-                )
+    table_name, time_col, value_cols = _RESOLUTION_SOURCES[chosen_resolution]
+    effective_limit = min(limit, 10000) if limit is not None else 10000
+
+    params: list[Any] = [channel_id, field_ids, end_time, effective_limit]
+    time_filter = f"AND {time_col} <= $3"
+    if start_time is not None:
+        params.append(start_time)
+        time_filter += f" AND {time_col} >= $5"
+
+    # Fetch newest N points per field via lateral index scan, then return chronologically (ASC)
+    query = f"""
+        SELECT sub.time, sub.field_id, sub.value, sub.min_v, sub.max_v
+        FROM unnest($2::int[]) AS f(fid)
+        CROSS JOIN LATERAL (
+            SELECT {time_col} AS time, field_id, {value_cols}
+            FROM {table_name}
+            WHERE channel_id = $1 AND field_id = f.fid {time_filter}
+            ORDER BY {time_col} DESC
+            LIMIT $4
+        ) sub
+        ORDER BY sub.time ASC;
+    """
+    rows = await db.fetch(query, *params)
+
+    for r in rows:
+        key = field_map[r["field_id"]]
+        if chosen_resolution == "raw":
+            result_fields[key].append(TelemetryPoint(time=r["time"], value=r["value"]))
+        else:
+            result_fields[key].append(
+                TelemetryPoint(time=r["time"], value=r["value"], min=r["min_v"], max=r["max_v"])
+            )
 
     return ChannelTelemetryOut(
         channel_id=channel_id,

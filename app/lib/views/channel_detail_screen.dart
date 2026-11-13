@@ -36,12 +36,11 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
   void initState() {
     super.initState();
     _tabController = TabController(length: widget.isReadOnly ? 1 : 3, vsync: this);
-    if (widget.isReadOnly) {
+    final prov = context.read<ChannelProvider>();
+    if (widget.isReadOnly && !prov.apiService.isAuthenticated) {
       _pollingTimer = Timer.periodic(const Duration(seconds: 10), (_) {
         if (mounted) {
-          final prov = context.read<ChannelProvider>();
-          prov.loadLatestSnapshot(widget.channel.id);
-          prov.loadHistoricalData(widget.channel.id, resolution: prov.currentResolution);
+          context.read<ChannelProvider>().refreshTelemetry(widget.channel.id);
         }
       });
     }
@@ -1247,15 +1246,125 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
     );
   }
 
+  static const List<int> _presetLimits = [50, 100, 500, 1000, 5000, 10000];
+
+  Future<void> _showCustomLimitDialog(ChannelProvider provider) async {
+    final ctrl = TextEditingController(text: provider.pointLimit.toString());
+    String? errorText;
+
+    final chosen = await showDialog<int>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Custom Data Amount'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Enter the number of newest points per field to display (1 – 10,000):',
+                style: TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: ctrl,
+                keyboardType: TextInputType.number,
+                autofocus: true,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: InputDecoration(
+                  labelText: 'Points per field',
+                  hintText: 'e.g. 250',
+                  errorText: errorText,
+                  border: const OutlineInputBorder(),
+                ),
+                onSubmitted: (_) {
+                  final parsed = int.tryParse(ctrl.text.trim());
+                  if (parsed == null || parsed < 1 || parsed > ChannelProvider.maxPointLimit) {
+                    setDialogState(() => errorText = 'Enter a value between 1 and ${ChannelProvider.maxPointLimit}');
+                  } else {
+                    Navigator.pop(ctx, parsed);
+                  }
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final parsed = int.tryParse(ctrl.text.trim());
+                if (parsed == null || parsed < 1 || parsed > ChannelProvider.maxPointLimit) {
+                  setDialogState(() => errorText = 'Enter a value between 1 and ${ChannelProvider.maxPointLimit}');
+                } else {
+                  Navigator.pop(ctx, parsed);
+                }
+              },
+              child: const Text('Apply'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (chosen != null && mounted) {
+      await provider.loadHistoricalData(widget.channel.id, limit: chosen);
+    }
+  }
+
+  Widget _buildCompactDropdown<T>({
+    required T value,
+    required List<DropdownMenuItem<T>> items,
+    required ValueChanged<T?> onChanged,
+    IconData? icon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 15, color: Colors.blueAccent),
+            const SizedBox(width: 6),
+          ],
+          DropdownButton<T>(
+            value: value,
+            isDense: true,
+            underline: const SizedBox(),
+            style: const TextStyle(fontSize: 13),
+            items: items,
+            onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTelemetryTab(ChannelProvider provider) {
     final mqttState = provider.mqttService.currentState;
+    final isPollingOnly = widget.isReadOnly && !provider.apiService.isAuthenticated;
+    final syncTimeStr = provider.lastSyncedAt != null
+        ? ' • Updated ${DateFormat('HH:mm:ss').format(provider.lastSyncedAt!.toLocal())}'
+        : '';
+
+    final limitOptions = List<int>.from(_presetLimits);
+    if (!limitOptions.contains(provider.pointLimit)) {
+      limitOptions.add(provider.pointLimit);
+      limitOptions.sort();
+    }
 
     return RefreshIndicator(
       onRefresh: () async {
         await Future.wait([
           provider.loadFields(widget.channel.id),
-          provider.loadHistoricalData(widget.channel.id, resolution: provider.currentResolution),
-          provider.loadLatestSnapshot(widget.channel.id),
+          provider.refreshTelemetry(widget.channel.id),
         ]);
       },
       child: ListView(
@@ -1270,29 +1379,38 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
                 children: [
                   _StatusIndicator(
                     state: mqttState,
-                    isPolling: widget.isReadOnly && !provider.apiService.isAuthenticated,
+                    isPolling: isPollingOnly,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(
-                      widget.isReadOnly && !provider.apiService.isAuthenticated
-                          ? 'Live Telemetry (Auto-Refresh 10s)'
-                          : mqttState == BrokerState.connected
-                              ? 'Streaming Live Data (QoS 1)'
-                              : mqttState == BrokerState.connecting
-                                  ? 'Connecting to Broker...'
-                                  : 'Offline / Historical View',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isPollingOnly
+                              ? 'Live Telemetry (Auto-Refresh 10s)'
+                              : mqttState == BrokerState.connected
+                                  ? 'Live Sync (MQTT Trigger → API)'
+                                  : mqttState == BrokerState.connecting
+                                      ? 'Connecting to Trigger Socket...'
+                                      : 'Offline / Historical View',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                        if (syncTimeStr.isNotEmpty)
+                          Text(
+                            'Showing up to ${provider.pointLimit} pts$syncTimeStr',
+                            style: const TextStyle(fontSize: 11, color: Colors.grey),
+                          ),
+                      ],
                     ),
                   ),
-                  if (widget.isReadOnly && !provider.apiService.isAuthenticated)
+                  if (isPollingOnly)
                     IconButton(
                       icon: const Icon(Icons.refresh, color: Colors.tealAccent),
                       tooltip: 'Refresh Telemetry',
                       onPressed: () {
                         provider.loadFields(widget.channel.id);
-                        provider.loadHistoricalData(widget.channel.id, resolution: provider.currentResolution);
-                        provider.loadLatestSnapshot(widget.channel.id);
+                        provider.refreshTelemetry(widget.channel.id);
                       },
                     )
                   else
@@ -1301,7 +1419,7 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
                         provider.isLiveStreaming ? Icons.pause_circle_filled : Icons.play_circle_fill,
                         color: provider.isLiveStreaming ? Colors.orange : Colors.green,
                       ),
-                      tooltip: provider.isLiveStreaming ? 'Pause Stream' : 'Resume Stream',
+                      tooltip: provider.isLiveStreaming ? 'Pause Live Sync' : 'Resume Live Sync',
                       onPressed: () {
                         if (provider.isLiveStreaming) {
                           provider.stopLiveStream();
@@ -1316,22 +1434,76 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
           ),
           const SizedBox(height: 16),
 
-          // Resolution Picker Row
+          // Telemetry Header & Data Amount / Resolution Controls
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Telemetry Fields',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            children: const [
+              Expanded(
+                child: Text(
+                  'Telemetry Fields',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
               ),
-              DropdownButton<String>(
-                value: provider.currentResolution,
-                underline: const SizedBox(),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              // Time Window selector
+              _buildCompactDropdown<String>(
+                icon: Icons.schedule,
+                value: provider.timeWindow,
                 items: const [
-                  DropdownMenuItem(value: 'auto', child: Text('Auto Resolution')),
+                  DropdownMenuItem(value: '15m', child: Text('Last 15m')),
+                  DropdownMenuItem(value: '1h', child: Text('Last 1h')),
+                  DropdownMenuItem(value: '6h', child: Text('Last 6h')),
+                  DropdownMenuItem(value: '24h', child: Text('Last 24h')),
+                  DropdownMenuItem(value: '7d', child: Text('Last 7d')),
+                  DropdownMenuItem(value: '30d', child: Text('Last 30d')),
+                  DropdownMenuItem(value: 'all', child: Text('All Time')),
+                ],
+                onChanged: (val) {
+                  if (val != null) {
+                    provider.loadHistoricalData(widget.channel.id, window: val);
+                  }
+                },
+              ),
+              // Point Limit selector (presets + custom)
+              _buildCompactDropdown<int>(
+                icon: Icons.format_list_numbered,
+                value: provider.pointLimit,
+                items: [
+                  ...limitOptions.map(
+                    (n) => DropdownMenuItem<int>(
+                      value: n,
+                      child: Text('$n pts'),
+                    ),
+                  ),
+                  const DropdownMenuItem<int>(
+                    value: -1,
+                    child: Text('Custom...'),
+                  ),
+                ],
+                onChanged: (val) {
+                  if (val == null) return;
+                  if (val == -1) {
+                    _showCustomLimitDialog(provider);
+                  } else {
+                    provider.loadHistoricalData(widget.channel.id, limit: val);
+                  }
+                },
+              ),
+              // Resolution selector
+              _buildCompactDropdown<String>(
+                icon: Icons.tune,
+                value: provider.currentResolution,
+                items: const [
+                  DropdownMenuItem(value: 'auto', child: Text('Auto Res')),
                   DropdownMenuItem(value: 'raw', child: Text('Raw Points')),
-                  DropdownMenuItem(value: '1m', child: Text('1-min Averages')),
-                  DropdownMenuItem(value: '1h', child: Text('1-hour Averages')),
+                  DropdownMenuItem(value: '1m', child: Text('1-min Avg')),
+                  DropdownMenuItem(value: '1h', child: Text('1-hour Avg')),
                 ],
                 onChanged: (val) {
                   if (val != null) {
@@ -1341,7 +1513,7 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
 
           // Snapshot Cards Grid (Dynamic / Unlimited Fields)
           if (provider.latestValues.isNotEmpty) ...[
@@ -1892,9 +2064,9 @@ class _TimeSeriesChartCard extends StatelessWidget {
                   lineBarsData: [
                     LineChartBarData(
                       spots: spots,
-                      isCurved: true,
+                      isCurved: points.length <= 300,
                       color: Colors.blueAccent,
-                      barWidth: 2.5,
+                      barWidth: points.length > 1000 ? 1.5 : 2.5,
                       dotData: const FlDotData(show: false),
                       belowBarData: BarAreaData(
                         show: true,

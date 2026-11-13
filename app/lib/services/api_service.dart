@@ -294,11 +294,15 @@ class ApiService {
     String? fields,
     DateTime? start,
     DateTime? end,
+    int? limit,
+    bool allTime = false,
   }) async {
     final queryParams = <String, String>{
       'resolution': resolution,
-      if (start != null) 'start': start.toIso8601String(),
-      if (end != null) 'end': end.toIso8601String(),
+      if (allTime) 'all_time': 'true',
+      if (start != null) 'start': start.toUtc().toIso8601String(),
+      if (end != null) 'end': end.toUtc().toIso8601String(),
+      if (limit != null) 'limit': limit.toString(),
     };
     if (fields != null) {
       queryParams['fields'] = fields;

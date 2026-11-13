@@ -17,23 +17,42 @@ class ChannelProvider extends ChangeNotifier {
   List<ApiKeyItem> apiKeys = [];
 
   // Telemetry state for active channel
+  static const int maxPointLimit = 10000;
+  static const Map<String, Duration> _timeWindowDurations = {
+    '15m': Duration(minutes: 15),
+    '1h': Duration(hours: 1),
+    '6h': Duration(hours: 6),
+    '24h': Duration(hours: 24),
+    '7d': Duration(days: 7),
+    '30d': Duration(days: 30),
+  };
+
   Map<String, List<TelemetryPoint>> chartPoints = {};
   Map<String, dynamic> latestValues = {};
   bool isLoading = false;
   bool isLiveStreaming = false;
   String currentResolution = 'auto';
+  int pointLimit = 100;
+  String timeWindow = '1h';
+  DateTime? lastSyncedAt;
 
-  StreamSubscription? _mqttDataSub;
+  StreamSubscription? _mqttNotifySub;
   StreamSubscription? _mqttStateSub;
+  Timer? _syncDebounceTimer;
+  bool _isSyncInFlight = false;
+  bool _pendingResync = false;
 
   ChannelProvider({required this.apiService}) {
     _mqttStateSub = mqttService.stateStream.listen((state) {
       isLiveStreaming = state == BrokerState.connected;
+      if (!isLiveStreaming) {
+        _cancelPendingSync();
+      }
       notifyListeners();
     });
 
-    _mqttDataSub = mqttService.dataStream.listen((data) {
-      _handleIncomingMqttData(data);
+    _mqttNotifySub = mqttService.notificationStream.listen((_) {
+      _onMqttDataArrived();
     });
   }
 
@@ -80,9 +99,11 @@ class ChannelProvider extends ChangeNotifier {
   }
 
   Future<void> selectChannel(Channel channel, {bool isReadOnly = false}) async {
+    _cancelPendingSync();
     activeChannel = channel;
     chartPoints.clear();
     latestValues.clear();
+    lastSyncedAt = null;
     notifyListeners();
 
     if (isReadOnly) {
@@ -113,8 +134,11 @@ class ChannelProvider extends ChangeNotifier {
 
   Future<void> loadFields(int channelId) async {
     try {
-      fields = await apiService.getFields(channelId);
-      notifyListeners();
+      final loaded = await apiService.getFields(channelId);
+      if (activeChannel?.id == channelId) {
+        fields = loaded;
+        notifyListeners();
+      }
     } catch (e) {
       debugPrint('Error loading fields: $e');
     }
@@ -148,12 +172,35 @@ class ChannelProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> loadHistoricalData(int channelId, {String resolution = 'auto'}) async {
-    currentResolution = resolution;
+  Future<void> loadHistoricalData(
+    int channelId, {
+    String? resolution,
+    int? limit,
+    String? window,
+  }) async {
+    if (resolution != null) currentResolution = resolution;
+    if (limit != null) pointLimit = limit.clamp(1, maxPointLimit);
+    if (window != null) timeWindow = window;
+
+    final now = DateTime.now().toUtc();
+    final isAllTime = timeWindow == 'all';
+    final duration = _timeWindowDurations[timeWindow];
+    final DateTime? startTime = isAllTime ? null : now.subtract(duration ?? const Duration(hours: 1));
+
     try {
-      final dataRes = await apiService.getTelemetry(channelId, resolution: resolution);
-      chartPoints = dataRes.fields;
-      notifyListeners();
+      final dataRes = await apiService.getTelemetry(
+        channelId,
+        resolution: currentResolution,
+        start: startTime,
+        end: now,
+        limit: pointLimit,
+        allTime: isAllTime,
+      );
+      if (activeChannel?.id == channelId) {
+        chartPoints = dataRes.fields;
+        lastSyncedAt = DateTime.now();
+        notifyListeners();
+      }
     } catch (e) {
       debugPrint('Error loading historical telemetry: $e');
     }
@@ -163,10 +210,26 @@ class ChannelProvider extends ChangeNotifier {
     try {
       final res = await apiService.getLatestTelemetry(channelId);
       final rawFields = res['fields'] as Map<String, dynamic>? ?? {};
-      latestValues = Map<String, dynamic>.from(rawFields);
-      notifyListeners();
+      if (activeChannel?.id == channelId) {
+        latestValues = Map<String, dynamic>.from(rawFields);
+        notifyListeners();
+      }
     } catch (e) {
       debugPrint('Error loading snapshot: $e');
+    }
+  }
+
+  Future<void> refreshTelemetry(int channelId) async {
+    await Future.wait([
+      loadLatestSnapshot(channelId),
+      loadHistoricalData(channelId),
+    ]);
+    final knownKeys = fields.map((f) => f.key).toSet();
+    final hasNewField = latestValues.keys.any(
+      (k) => k != 'ts' && k != 'time' && k != 'timestamp' && !knownKeys.contains(k),
+    );
+    if (hasNewField && activeChannel?.id == channelId) {
+      await loadFields(channelId);
     }
   }
 
@@ -194,39 +257,55 @@ class ChannelProvider extends ChangeNotifier {
   }
 
   void stopLiveStream() {
+    _cancelPendingSync();
     mqttService.disconnect();
   }
 
-  void _handleIncomingMqttData(Map<String, dynamic> data) {
-    final now = DateTime.now();
+  void _cancelPendingSync() {
+    _syncDebounceTimer?.cancel();
+    _syncDebounceTimer = null;
+    _pendingResync = false;
+  }
 
-    data.forEach((key, val) {
-      if (key == 'ts' || key == 'time' || key == 'timestamp') return;
+  void _onMqttDataArrived() {
+    if (activeChannel == null || !isLiveStreaming) return;
+    if (_isSyncInFlight) {
+      _pendingResync = true;
+      return;
+    }
+    _scheduleDebouncedSync();
+  }
 
-      // Update latest value card
-      latestValues[key] = val;
+  void _scheduleDebouncedSync() {
+    if (_syncDebounceTimer != null && _syncDebounceTimer!.isActive) return;
+    _syncDebounceTimer = Timer(const Duration(milliseconds: 600), _executeSyncFromApi);
+  }
 
-      // If numeric, append point to active chart list
-      if (val is num) {
-        final point = TelemetryPoint(time: now, value: val.toDouble());
-        if (!chartPoints.containsKey(key)) {
-          chartPoints[key] = [];
-        }
-        chartPoints[key]!.add(point);
+  Future<void> _executeSyncFromApi() async {
+    final channelId = activeChannel?.id;
+    if (channelId == null || !isLiveStreaming) return;
 
-        // Keep maximum 100 points in RAM for active live chart
-        if (chartPoints[key]!.length > 100) {
-          chartPoints[key]!.removeAt(0);
-        }
+    if (_isSyncInFlight) {
+      _pendingResync = true;
+      return;
+    }
+
+    _isSyncInFlight = true;
+    try {
+      await refreshTelemetry(channelId);
+    } finally {
+      _isSyncInFlight = false;
+      if (_pendingResync && activeChannel?.id == channelId && isLiveStreaming) {
+        _pendingResync = false;
+        _scheduleDebouncedSync();
       }
-    });
-
-    notifyListeners();
+    }
   }
 
   @override
   void dispose() {
-    _mqttDataSub?.cancel();
+    _cancelPendingSync();
+    _mqttNotifySub?.cancel();
     _mqttStateSub?.cancel();
     mqttService.dispose();
     super.dispose();

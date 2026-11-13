@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'mqtt_connection.dart';
@@ -9,10 +8,11 @@ enum BrokerState { disconnected, connecting, connected, error }
 class MqttService {
   MqttClient? _client;
   final _stateController = StreamController<BrokerState>.broadcast();
-  final _dataController = StreamController<Map<String, dynamic>>.broadcast();
+  final _notificationController = StreamController<void>.broadcast();
 
   Stream<BrokerState> get stateStream => _stateController.stream;
-  Stream<Map<String, dynamic>> get dataStream => _dataController.stream;
+  /// Emits a signal whenever a new telemetry packet arrives on the subscribed channel.
+  Stream<void> get notificationStream => _notificationController.stream;
   BrokerState currentState = BrokerState.disconnected;
 
   Future<void> connect({
@@ -23,6 +23,7 @@ class MqttService {
     required int channelId,
     bool useTls = false,
   }) async {
+    _client?.disconnect();
     _updateState(BrokerState.connecting);
 
     final clientId = 'flutter_${username}_${DateTime.now().millisecondsSinceEpoch % 10000}';
@@ -53,29 +54,13 @@ class MqttService {
           _client!.connectionStatus?.state == MqttConnectionState.connected) {
         _updateState(BrokerState.connected);
 
-        // Subscribe to channel data topic
+        // Subscribe to channel data topic strictly as a "new data arrived" notification trigger
         final topic = 'channels/$channelId/data';
         _client!.subscribe(topic, MqttQos.atLeastOnce);
 
         _client!.updates?.listen((List<MqttReceivedMessage<MqttMessage>> messages) {
-          for (final msg in messages) {
-            final recMess = msg.payload as MqttPublishMessage;
-            final payload = MqttPublishPayload.bytesToStringAsString(recMess.payload.message);
-
-            try {
-              final decoded = jsonDecode(payload);
-              if (decoded is Map<String, dynamic>) {
-                _dataController.add(decoded);
-              } else if (decoded is List) {
-                for (final item in decoded) {
-                  if (item is Map<String, dynamic>) {
-                    _dataController.add(item);
-                  }
-                }
-              }
-            } catch (e) {
-              debugPrint('Error parsing incoming MQTT message: $e');
-            }
+          if (messages.isNotEmpty) {
+            _notificationController.add(null);
           }
         });
       } else {
@@ -102,6 +87,6 @@ class MqttService {
   void dispose() {
     disconnect();
     _stateController.close();
-    _dataController.close();
+    _notificationController.close();
   }
 }
