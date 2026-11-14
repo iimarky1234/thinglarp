@@ -119,19 +119,25 @@ class _ApiTutorialScreenState extends State<ApiTutorialScreen>
     final channels = context.watch<ChannelProvider>().channels;
 
     final colors = context.appColors;
+    final isPhone = context.isCompactPhone;
     return Scaffold(
       appBar: AppBar(
         title: Row(
           children: [
             Icon(Icons.integration_instructions_outlined, color: colors.accentCyan),
             const SizedBox(width: 10),
-            const Text('API & Integration Tutorial'),
+            const Expanded(
+              child: Text(
+                'API & Integration Tutorial',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
-        actions: const [
+        actions: [
           Padding(
-            padding: EdgeInsets.only(right: 16),
-            child: AppThemeToggleButton(),
+            padding: EdgeInsets.only(right: isPhone ? 8 : 16),
+            child: const AppThemeToggleButton(),
           ),
         ],
         bottom: TabBar(
@@ -173,96 +179,146 @@ class _ApiTutorialScreenState extends State<ApiTutorialScreen>
     final colors = context.appColors;
 
     return Container(
+      width: double.infinity,
       decoration: BoxDecoration(
         color: colors.surfaceCard,
         border: Border(bottom: BorderSide(color: colors.border)),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Wrap(
-        spacing: 16,
-        runSpacing: 10,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        alignment: WrapAlignment.spaceBetween,
-        children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
+      padding: EdgeInsets.symmetric(
+        horizontal: context.isCompactPhone ? 12 : 16,
+        vertical: 10,
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return Wrap(
+            spacing: 16,
+            runSpacing: 10,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            alignment: WrapAlignment.spaceBetween,
             children: [
-              Icon(Icons.sensors, size: 20, color: colors.accentCyan),
-              const SizedBox(width: 8),
-              const Text('Active Channel: ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-              if (channels.isEmpty)
-                Text('Channel #$_channelId', style: const TextStyle(fontWeight: FontWeight.w600))
-              else
-                DropdownButton<Channel>(
-                  value: _selectedChannel != null && channels.any((c) => c.id == _selectedChannel!.id)
-                      ? channels.firstWhere((c) => c.id == _selectedChannel!.id)
-                      : (channels.isNotEmpty ? channels.first : null),
-                  isDense: true,
-                  underline: const SizedBox(),
-                  items: channels.map((c) {
-                    return DropdownMenuItem<Channel>(
-                      value: c,
-                      child: Text('${c.name} (ID: ${c.id})', style: const TextStyle(fontSize: 13)),
-                    );
-                  }).toList(),
-                  onChanged: (ch) {
-                    if (ch != null) {
-                      setState(() {
-                        _selectedChannel = ch;
-                        _activeApiKey = '';
-                      });
-                      _loadKeysForChannel(ch.id);
-                    }
-                  },
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: constraints.maxWidth),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.sensors, size: 20, color: colors.accentCyan),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Active Channel: ',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                    if (channels.isEmpty)
+                      Flexible(
+                        child: Text(
+                          'Channel #$_channelId',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      )
+                    else
+                      Flexible(
+                        child: DropdownButton<Channel>(
+                          isExpanded: false,
+                          value: _selectedChannel != null &&
+                                  channels.any((c) => c.id == _selectedChannel!.id)
+                              ? channels.firstWhere((c) => c.id == _selectedChannel!.id)
+                              : (channels.isNotEmpty ? channels.first : null),
+                          isDense: true,
+                          underline: const SizedBox(),
+                          items: channels.map((c) {
+                            return DropdownMenuItem<Channel>(
+                              value: c,
+                              child: Text(
+                                '${c.name} (ID: ${c.id})',
+                                style: const TextStyle(fontSize: 13),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (ch) {
+                            if (ch != null) {
+                              setState(() {
+                                _selectedChannel = ch;
+                                _activeApiKey = '';
+                              });
+                              _loadKeysForChannel(ch.id);
+                            }
+                          },
+                        ),
+                      ),
+                  ],
                 ),
-            ],
-          ),
-          if (_apiKeys.isNotEmpty)
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.key, size: 18, color: colors.warning),
-                const SizedBox(width: 6),
-                const Text('Active Key: ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                DropdownButton<String>(
-                  value: _apiKeys.any((k) => (k.apiKey ?? k.prefix) == _activeApiKey)
-                      ? _activeApiKey
-                      : (_apiKeys.first.apiKey ?? _apiKeys.first.prefix),
-                  isDense: true,
-                  underline: const SizedBox(),
-                  items: _apiKeys.map((k) {
-                    final keyVal = k.apiKey ?? k.prefix;
-                    return DropdownMenuItem<String>(
-                      value: keyVal,
-                      child: Text('${k.scope.toUpperCase()} (${k.prefix}***)', style: const TextStyle(fontSize: 12)),
-                    );
-                  }).toList(),
-                  onChanged: (newKey) {
-                    if (newKey != null) {
-                      setState(() => _activeApiKey = newKey);
-                    }
-                  },
+              ),
+              if (_apiKeys.isNotEmpty)
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: constraints.maxWidth),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.key, size: 18, color: colors.warning),
+                      const SizedBox(width: 6),
+                      const Text(
+                        'Active Key: ',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                      Flexible(
+                        child: DropdownButton<String>(
+                          value: _apiKeys.any((k) => (k.apiKey ?? k.prefix) == _activeApiKey)
+                              ? _activeApiKey
+                              : (_apiKeys.first.apiKey ?? _apiKeys.first.prefix),
+                          isDense: true,
+                          underline: const SizedBox(),
+                          items: _apiKeys.map((k) {
+                            final keyVal = k.apiKey ?? k.prefix;
+                            return DropdownMenuItem<String>(
+                              value: keyVal,
+                              child: Text(
+                                '${k.scope.toUpperCase()} (${k.prefix}***)',
+                                style: const TextStyle(fontSize: 12),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (newKey) {
+                            if (newKey != null) {
+                              setState(() => _activeApiKey = newKey);
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else if (_isLoadingKeys)
+                const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-              ],
-            )
-          else if (_isLoadingKeys)
-            const SizedBox(
-              width: 14,
-              height: 14,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.link, size: 18, color: colors.textSecondary),
-              const SizedBox(width: 6),
-              Text(
-                'API Base: $_apiBase',
-                style: TextStyle(fontSize: 12, fontFamily: 'monospace', color: colors.textSecondary),
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: constraints.maxWidth),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.link, size: 18, color: colors.textSecondary),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        'API Base: $_apiBase',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontFamily: 'monospace',
+                          color: colors.textSecondary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -404,64 +460,141 @@ class _ApiTutorialScreenState extends State<ApiTutorialScreen>
 
   Widget _buildComparisonTable() {
     final colors = context.appColors;
-    return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: colors.border),
+    const rows = [
+      (
+        feature: 'Ideal For',
+        http: 'Webhooks, Cron jobs, Python scripts, Cloud',
+        mqtt: 'ESP32, Arduino, MicroPython, Embedded IoT',
       ),
-      child: Table(
-        columnWidths: const {
-          0: FlexColumnWidth(1.2),
-          1: FlexColumnWidth(1.5),
-          2: FlexColumnWidth(1.5),
-        },
-        border: TableBorder(
-          horizontalInside: BorderSide(color: colors.border),
-        ),
-        children: [
-          TableRow(
-            decoration: BoxDecoration(
-              color: colors.surfaceElevated,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+      (
+        feature: 'Authentication',
+        http: 'X-API-Key header or Bearer JWT',
+        mqtt: 'Device Username & Password (Bcrypt)',
+      ),
+      (
+        feature: 'Streaming Speed',
+        http: '1–10 Hz (New TCP connection per write)',
+        mqtt: '50–100 Hz+ (Persistent socket connection)',
+      ),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 520) {
+          return Column(
+            children: rows.map((row) {
+              return Card(
+                margin: const EdgeInsets.only(bottom: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  side: BorderSide(color: colors.border),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        row.feature,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'HTTP REST API',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: colors.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        row.http,
+                        style: TextStyle(fontSize: 12, color: colors.textSecondary),
+                      ),
+                      const Divider(height: 14),
+                      Text(
+                        'MQTT Ingestion',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: colors.accentCyan,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        row.mqtt,
+                        style: TextStyle(fontSize: 12, color: colors.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          );
+        }
+
+        return Card(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: BorderSide(color: colors.border),
+          ),
+          child: Table(
+            columnWidths: const {
+              0: FlexColumnWidth(1.2),
+              1: FlexColumnWidth(1.5),
+              2: FlexColumnWidth(1.5),
+            },
+            border: TableBorder(
+              horizontalInside: BorderSide(color: colors.border),
             ),
-            children: const [
-              Padding(
-                padding: EdgeInsets.all(10),
-                child: Text('Feature', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-              ),
-              Padding(
-                padding: EdgeInsets.all(10),
-                child: Text('HTTP REST API', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-              ),
-              Padding(
-                padding: EdgeInsets.all(10),
-                child: Text('MQTT Ingestion', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-              ),
-            ],
-          ),
-          TableRow(
             children: [
-              Padding(padding: EdgeInsets.all(10), child: Text('Ideal For', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
-              Padding(padding: EdgeInsets.all(10), child: Text('Webhooks, Cron jobs, Python scripts, Cloud', style: TextStyle(fontSize: 12))),
-              Padding(padding: EdgeInsets.all(10), child: Text('ESP32, Arduino, MicroPython, Embedded IoT', style: TextStyle(fontSize: 12))),
+              TableRow(
+                decoration: BoxDecoration(
+                  color: colors.surfaceElevated,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+                ),
+                children: const [
+                  Padding(
+                    padding: EdgeInsets.all(10),
+                    child: Text('Feature', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.all(10),
+                    child: Text('HTTP REST API', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.all(10),
+                    child: Text('MQTT Ingestion', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  ),
+                ],
+              ),
+              ...rows.map(
+                (row) => TableRow(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: Text(row.feature, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: Text(row.http, style: const TextStyle(fontSize: 12)),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: Text(row.mqtt, style: const TextStyle(fontSize: 12)),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
-          TableRow(
-            children: [
-              Padding(padding: EdgeInsets.all(10), child: Text('Authentication', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
-              Padding(padding: EdgeInsets.all(10), child: Text('X-API-Key header or Bearer JWT', style: TextStyle(fontSize: 12))),
-              Padding(padding: EdgeInsets.all(10), child: Text('Device Username & Password (Bcrypt)', style: TextStyle(fontSize: 12))),
-            ],
-          ),
-          TableRow(
-            children: [
-              Padding(padding: EdgeInsets.all(10), child: Text('Streaming Speed', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
-              Padding(padding: EdgeInsets.all(10), child: Text('1–10 Hz (New TCP connection per write)', style: TextStyle(fontSize: 12))),
-              Padding(padding: EdgeInsets.all(10), child: Text('50–100 Hz+ (Persistent socket connection)', style: TextStyle(fontSize: 12))),
-            ],
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -827,8 +960,10 @@ void loop() {
   // ===========================================================================
   Widget _buildLiveTesterTab() {
     final colors = context.appColors;
+    final isPhone = context.isCompactPhone;
     return ListView(
-      padding: const EdgeInsets.all(20),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: EdgeInsets.all(isPhone ? 12 : 20),
       children: [
         Card(
           shape: RoundedRectangleBorder(
@@ -836,7 +971,7 @@ void loop() {
             side: BorderSide(color: colors.border),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(18),
+            padding: EdgeInsets.all(isPhone ? 14 : 18),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -844,9 +979,11 @@ void loop() {
                   children: [
                     Icon(Icons.speed, color: colors.accentCyan),
                     const SizedBox(width: 8),
-                    Text(
-                      'Send Live Telemetry to Channel #$_channelId',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    Expanded(
+                      child: Text(
+                        'Send Live Telemetry to Channel #$_channelId',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
                     ),
                   ],
                 ),
@@ -877,7 +1014,9 @@ void loop() {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Row(
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 10,
                   children: [
                     ElevatedButton.icon(
                       icon: _isTesting
@@ -895,7 +1034,6 @@ void loop() {
                       ),
                       onPressed: _isTesting ? null : _executeTestSend,
                     ),
-                    const SizedBox(width: 12),
                     OutlinedButton(
                       child: const Text('Randomize Values'),
                       onPressed: () {
@@ -1080,12 +1218,15 @@ void loop() {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    color: colors.accentCyan,
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: colors.accentCyan,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 IconButton(
@@ -1104,13 +1245,16 @@ void loop() {
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: colors.border),
               ),
-              child: SelectableText(
-                code,
-                style: TextStyle(
-                  fontFamily: 'monospace',
-                  fontSize: 12,
-                  height: 1.45,
-                  color: colors.codeText,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SelectableText(
+                  code,
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 12,
+                    height: 1.45,
+                    color: colors.codeText,
+                  ),
                 ),
               ),
             ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../config.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_ui.dart';
@@ -62,10 +63,29 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _openSettings() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+    );
+    if (!mounted) return;
+    setState(() {});
+    _checkRegistrationStatus();
+  }
+
+  String _formatHostLabel(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri != null && uri.host.isNotEmpty) {
+      return uri.hasPort ? '${uri.host}:${uri.port}' : uri.host;
+    }
+    return url;
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final colors = context.appColors;
+    final isPhone = context.isCompactPhone;
 
     return Scaffold(
       body: Container(
@@ -84,9 +104,9 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
+                padding: EdgeInsets.symmetric(
+                  horizontal: isPhone ? 16 : 20,
+                  vertical: 10,
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
@@ -96,14 +116,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     Tooltip(
                       message: 'Server Settings',
                       child: InkWell(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const SettingsScreen(),
-                          ),
-                        ),
+                        onTap: _openSettings,
                         borderRadius: BorderRadius.circular(10),
                         child: Container(
+                          constraints: const BoxConstraints(
+                            minWidth: 42,
+                            minHeight: 40,
+                          ),
                           padding: const EdgeInsets.all(9),
                           decoration: BoxDecoration(
                             color: colors.surfaceCard,
@@ -124,21 +143,29 @@ class _LoginScreenState extends State<LoginScreen> {
               Expanded(
                 child: Center(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 16,
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isPhone ? 16 : 20,
+                      vertical: 12,
                     ),
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 430),
-                      child: AppSurfaceCard(
-                        padding: const EdgeInsets.all(28),
-                        borderRadius: 22,
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          AppSurfaceCard(
+                            padding: EdgeInsets.all(isPhone ? 20 : 28),
+                            borderRadius: 22,
+                            child: AutofillGroup(
+                              child: Form(
+                                key: _formKey,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
                               Row(
                                 children: [
                                   const AppBrandMark(size: 48),
@@ -254,6 +281,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               TextFormField(
                                 controller: _usernameController,
                                 textInputAction: TextInputAction.next,
+                                autofillHints: const [AutofillHints.username],
                                 decoration: const InputDecoration(
                                   labelText: 'Username',
                                   hintText: 'Enter your username',
@@ -273,6 +301,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                 controller: _passwordController,
                                 obscureText: _obscurePassword,
                                 textInputAction: TextInputAction.done,
+                                autofillHints: [
+                                  _isLogin
+                                      ? AutofillHints.password
+                                      : AutofillHints.newPassword,
+                                ],
                                 onFieldSubmitted: (_) => _submit(),
                                 decoration: InputDecoration(
                                   labelText: 'Password',
@@ -362,6 +395,58 @@ class _LoginScreenState extends State<LoginScreen> {
                             ],
                           ),
                         ),
+                      ),
+                    ),
+                          const SizedBox(height: 14),
+                          Center(
+                            child: InkWell(
+                              onTap: _openSettings,
+                              borderRadius: BorderRadius.circular(999),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: colors.surfaceCard.withValues(alpha: 0.85),
+                                  borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(color: colors.border),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.cloud_done_outlined,
+                                      size: 15,
+                                      color: colors.accentTeal,
+                                    ),
+                                    const SizedBox(width: 7),
+                                    Flexible(
+                                      child: Text(
+                                        'Server: ${_formatHostLabel(AppConfig().apiUrl)}',
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: colors.textSecondary,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Change',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: colors.primary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),

@@ -5,11 +5,33 @@ class AppConfig {
   static const String defaultApiUrl = 'http://localhost:8000';
   static const String defaultMqttHost = 'localhost';
   static const int defaultMqttPort = 1883;
+
+  static const String cloudApiUrl = 'https://api.iimarky123.io.vn';
+  static const String cloudMqttHost = 'mqtt.iimarky123.io.vn';
+  static const int cloudMqttPort = 8883;
+
   static const String defaultWebBaseUrl = 'https://thinglarp.iimarky123.io.vn/app';
 
-  String apiUrl = defaultApiUrl;
-  String mqttHost = defaultMqttHost;
-  int mqttPort = defaultMqttPort;
+  /// Uses ThingLarp Cloud endpoints by default on mobile APKs and hosted web builds,
+  /// while keeping localhost defaults for local desktop and dev runs.
+  static bool get useCloudDefaultsByPlatform {
+    if (kIsWeb) {
+      return Uri.base.host.contains('iimarky123.io.vn');
+    }
+    return defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS;
+  }
+
+  static String get recommendedApiUrl =>
+      useCloudDefaultsByPlatform ? cloudApiUrl : defaultApiUrl;
+  static String get recommendedMqttHost =>
+      useCloudDefaultsByPlatform ? cloudMqttHost : defaultMqttHost;
+  static int get recommendedMqttPort =>
+      useCloudDefaultsByPlatform ? cloudMqttPort : defaultMqttPort;
+
+  String apiUrl = recommendedApiUrl;
+  String mqttHost = recommendedMqttHost;
+  int mqttPort = recommendedMqttPort;
 
   static final AppConfig _instance = AppConfig._internal();
   factory AppConfig() => _instance;
@@ -27,21 +49,9 @@ class AppConfig {
 
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
-    String fallbackApiUrl = defaultApiUrl;
-    String fallbackMqttHost = defaultMqttHost;
-    int fallbackMqttPort = defaultMqttPort;
-
-    if (kIsWeb) {
-      if (Uri.base.host.contains('iimarky123.io.vn')) {
-        fallbackApiUrl = 'https://api.iimarky123.io.vn';
-        fallbackMqttHost = 'mqtt.iimarky123.io.vn';
-        fallbackMqttPort = 8883;
-      }
-    }
-
-    apiUrl = prefs.getString('api_url') ?? fallbackApiUrl;
-    mqttHost = prefs.getString('mqtt_host') ?? fallbackMqttHost;
-    mqttPort = prefs.getInt('mqtt_port') ?? fallbackMqttPort;
+    apiUrl = prefs.getString('api_url') ?? recommendedApiUrl;
+    mqttHost = prefs.getString('mqtt_host') ?? recommendedMqttHost;
+    mqttPort = prefs.getInt('mqtt_port') ?? recommendedMqttPort;
   }
 
   Future<void> save({required String newApiUrl, required String newMqttHost, required int newMqttPort}) async {

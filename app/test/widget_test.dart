@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:thinglarp_app/config.dart';
 import 'package:thinglarp_app/main.dart';
 import 'package:thinglarp_app/models/channel.dart';
 import 'package:thinglarp_app/models/telemetry.dart';
@@ -9,14 +11,19 @@ import 'package:thinglarp_app/providers/auth_provider.dart';
 import 'package:thinglarp_app/providers/channel_provider.dart';
 import 'package:thinglarp_app/providers/theme_provider.dart';
 import 'package:thinglarp_app/services/api_service.dart';
+import 'package:thinglarp_app/views/channel_detail_screen.dart';
 import 'package:thinglarp_app/views/channels_screen.dart';
 import 'package:thinglarp_app/views/login_screen.dart';
 import 'package:thinglarp_app/views/public_channel_viewer_screen.dart';
+import 'package:thinglarp_app/views/settings_screen.dart';
 import 'package:thinglarp_app/widgets/app_ui.dart';
 
 class _WidgetFakeApiService extends ApiService {
   bool returnEmptyWindow = false;
   int getTelemetryCount = 0;
+  List<Channel>? customChannels;
+  List<Device> sampleDevices = [];
+  List<ApiKeyItem> sampleApiKeys = [];
 
   final Channel sampleChannel = Channel(
     id: 2,
@@ -29,7 +36,7 @@ class _WidgetFakeApiService extends ApiService {
   );
 
   @override
-  Future<List<Channel>> getChannels() async => [sampleChannel];
+  Future<List<Channel>> getChannels() async => customChannels ?? [sampleChannel];
 
   @override
   Future<Channel> getChannel(int channelId) async => sampleChannel;
@@ -49,10 +56,10 @@ class _WidgetFakeApiService extends ApiService {
       ];
 
   @override
-  Future<List<Device>> getDevices(int channelId) async => [];
+  Future<List<Device>> getDevices(int channelId) async => sampleDevices;
 
   @override
-  Future<List<ApiKeyItem>> getApiKeys(int channelId) async => [];
+  Future<List<ApiKeyItem>> getApiKeys(int channelId) async => sampleApiKeys;
 
   @override
   Future<Map<String, dynamic>> getLatestTelemetry(int channelId) async => {
@@ -252,5 +259,206 @@ void main() {
     expect(find.text('VIEW ONLY'), findsOneWidget);
     expect(find.text('Temperature (°C)'), findsOneWidget);
     expect(find.textContaining('Samples: 2'), findsOneWidget);
+  });
+
+  testWidgets('Android platform defaults to ThingLarp Cloud and SettingsScreen renders cleanly at 360x800', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    try {
+      expect(AppConfig.useCloudDefaultsByPlatform, isTrue);
+      expect(AppConfig.recommendedApiUrl, AppConfig.cloudApiUrl);
+      expect(AppConfig.recommendedMqttHost, AppConfig.cloudMqttHost);
+      expect(AppConfig.recommendedMqttPort, AppConfig.cloudMqttPort);
+
+      final apiService = ApiService();
+      final authProvider = AuthProvider(apiService: apiService);
+      final themeProvider = ThemeProvider(initialMode: ThemeMode.dark);
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: authProvider),
+            ChangeNotifierProvider.value(value: themeProvider),
+            ChangeNotifierProvider(
+              create: (_) => ChannelProvider(apiService: apiService),
+            ),
+          ],
+          child: const MaterialApp(home: SettingsScreen()),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('ThingLarp Cloud'), findsOneWidget);
+      expect(find.text('Localhost Dev'), findsOneWidget);
+
+      await tester.ensureVisible(find.text('Localhost Dev'));
+      await tester.tap(find.text('Localhost Dev'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widgetList<EditableText>(find.byType(EditableText)).map((e) => e.controller.text),
+        containsAll(['http://localhost:8000', 'localhost', '1883']),
+      );
+
+      await tester.ensureVisible(find.text('ThingLarp Cloud'));
+      await tester.tap(find.text('ThingLarp Cloud'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widgetList<EditableText>(find.byType(EditableText)).map((e) => e.controller.text),
+        containsAll(['https://api.iimarky123.io.vn', 'mqtt.iimarky123.io.vn', '8883']),
+      );
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('ChannelsScreen adapts to 360x800 phone viewport and opens Create Channel modal', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    try {
+      final fakeApi = _WidgetFakeApiService();
+      fakeApi.customChannels = [
+        fakeApi.sampleChannel,
+        Channel(
+          id: 9,
+          ownerId: 1,
+          name: 'Greenhouse Rooftop Sensor Cluster #42 Long Title',
+          description: 'Automated microclimate monitoring station on rooftop wing B',
+          isPublic: false,
+          maxFields: 500,
+          createdAt: DateTime.utc(2026, 11, 14),
+        ),
+      ];
+      final authProvider = AuthProvider(apiService: fakeApi);
+      final channelProvider = ChannelProvider(apiService: fakeApi);
+      final themeProvider = ThemeProvider(initialMode: ThemeMode.light);
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: authProvider),
+            ChangeNotifierProvider.value(value: channelProvider),
+            ChangeNotifierProvider.value(value: themeProvider),
+          ],
+          child: const MaterialApp(home: ChannelsScreen()),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('TestPub'), findsOneWidget);
+      expect(find.textContaining('Greenhouse Rooftop'), findsOneWidget);
+      expect(find.byType(PopupMenuButton<String>), findsOneWidget);
+
+      // Open Create Channel responsive bottom sheet
+      await tester.tap(find.byType(FloatingActionButton));
+      await tester.pumpAndSettle();
+      expect(find.byType(ResponsiveModalScaffold), findsOneWidget);
+      expect(find.text('New Channel'), findsWidgets);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('ChannelDetailScreen renders phone NavigationBar, Devices, API Keys, and Export modal cleanly at 360x800', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    try {
+      final fakeApi = _WidgetFakeApiService();
+      fakeApi.sampleDevices = [
+        Device(
+          id: 1,
+          channelId: 2,
+          name: 'ESP32 Greenhouse Roof Climate Controller Alpha',
+          mqttUsername: 'dev_2_esp32_greenhouse_controller_alpha',
+          mqttPassword: 'super_secret_mqtt_password_2026',
+          scope: 'pubsub',
+          isActive: true,
+          createdAt: DateTime.utc(2026, 11, 13),
+        ),
+      ];
+      fakeApi.sampleApiKeys = [
+        ApiKeyItem(
+          id: 10,
+          channelId: 2,
+          prefix: 'tl_live_9876',
+          apiKey: 'tl_live_9876543210abcdef1234567890',
+          scope: 'write',
+          createdAt: DateTime.utc(2026, 11, 13),
+        ),
+      ];
+
+      final authProvider = AuthProvider(apiService: fakeApi);
+      final channelProvider = ChannelProvider(apiService: fakeApi);
+      final themeProvider = ThemeProvider(initialMode: ThemeMode.dark);
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: authProvider),
+            ChangeNotifierProvider.value(value: channelProvider),
+            ChangeNotifierProvider.value(value: themeProvider),
+          ],
+          child: MaterialApp(
+            home: ChannelDetailScreen(channel: fakeApi.sampleChannel),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Bottom NavigationBar replaces cramped top TabBar on compact phones
+      expect(find.byType(NavigationBar), findsOneWidget);
+      expect(find.text('Telemetry'), findsOneWidget);
+      expect(find.text('Devices'), findsOneWidget);
+      expect(find.text('API Keys'), findsOneWidget);
+
+      // Switch to Devices tab and verify stacked phone layout + full-width credentials
+      await tester.tap(find.text('Devices'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('ESP32 Greenhouse Roof Climate Controller Alpha'));
+      expect(find.text('ESP32 Greenhouse Roof Climate Controller Alpha'), findsOneWidget);
+      await tester.ensureVisible(find.text('dev_2_esp32_greenhouse_controller_alpha'));
+      expect(find.text('dev_2_esp32_greenhouse_controller_alpha'), findsOneWidget);
+      await tester.drag(find.byType(ListView).first, const Offset(0, -180));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byTooltip('Show password'));
+      await tester.tap(find.byTooltip('Show password'));
+      await tester.pumpAndSettle();
+      expect(find.text('super_secret_mqtt_password_2026'), findsOneWidget);
+
+      // Switch to API Keys tab
+      await tester.tap(find.text('API Keys'));
+      await tester.pumpAndSettle();
+      expect(find.text('WRITE API KEY'), findsOneWidget);
+
+      // Open phone overflow menu and launch Export bottom sheet
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AppBar),
+          matching: find.byType(PopupMenuButton<String>),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Download / Export Data'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ResponsiveModalScaffold), findsOneWidget);
+      expect(find.text('24 Hours'), findsOneWidget);
+      expect(find.text('All Time'), findsOneWidget);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
   });
 }

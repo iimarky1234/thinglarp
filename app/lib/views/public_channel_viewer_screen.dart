@@ -150,15 +150,16 @@ class _PublicChannelViewerScreenState extends State<PublicChannelViewerScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 10,
+                      alignment: WrapAlignment.center,
                       children: [
                         OutlinedButton.icon(
                           onPressed: _loadPublicChannel,
                           icon: const Icon(Icons.refresh_rounded, size: 18),
                           label: const Text('Retry'),
                         ),
-                        const SizedBox(width: 12),
                         ElevatedButton.icon(
                           onPressed: () {
                             Navigator.pushReplacement(

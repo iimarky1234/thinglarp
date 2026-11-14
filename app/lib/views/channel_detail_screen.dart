@@ -9,6 +9,7 @@ import 'package:intl/intl.dart' hide TextDirection;
 import '../models/channel.dart';
 import '../models/telemetry.dart';
 import '../providers/channel_provider.dart';
+import '../providers/theme_provider.dart';
 import '../services/mqtt_service.dart';
 import '../config.dart';
 import '../theme/app_theme.dart';
@@ -39,6 +40,11 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
   void initState() {
     super.initState();
     _tabController = TabController(length: widget.isReadOnly ? 1 : 3, vsync: this);
+    _tabController.addListener(() {
+      if (mounted && !_tabController.indexIsChanging) {
+        setState(() {});
+      }
+    });
     final prov = context.read<ChannelProvider>();
     if (prov.activeChannel?.id != widget.channel.id) {
       Future.microtask(() {
@@ -86,27 +92,14 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
         ),
       );
     } else {
-      showDialog(
+      final colors = context.appColors;
+      showResponsiveModal(
         context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.warning_amber_rounded, color: Colors.orangeAccent),
-              SizedBox(width: 8),
-              Text('Channel is Private'),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Share link copied to clipboard:\n$url\n'),
-              const Text(
-                'Note: Anyone who opens this link will receive an Access Denied (403) error because this channel is currently Private.',
-                style: TextStyle(color: Colors.grey, fontSize: 13),
-              ),
-            ],
-          ),
+        maxWidth: 440,
+        builder: (ctx) => ResponsiveModalScaffold(
+          title: 'Channel is Private',
+          icon: Icons.warning_amber_rounded,
+          iconColor: colors.warning,
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
@@ -137,6 +130,21 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
               child: const Text('Make Channel Public'),
             ),
           ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Share link copied to clipboard:\n$url',
+                style: TextStyle(color: colors.textPrimary, fontSize: 13.5),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Note: Anyone who opens this link will receive an Access Denied (403) error because this channel is currently Private.',
+                style: TextStyle(color: colors.textSecondary, fontSize: 13, height: 1.4),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -146,20 +154,44 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
     final nameCtrl = TextEditingController();
     String scope = 'publish';
 
-    showDialog(
+    showResponsiveModal(
       context: context,
+      maxWidth: 440,
       builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Provision New Device'),
-          content: Column(
+        builder: (context, setDialogState) => ResponsiveModalScaffold(
+          title: 'Provision New Device',
+          icon: Icons.memory_rounded,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final name = nameCtrl.text.trim();
+                if (name.isNotEmpty) {
+                  final provider = context.read<ChannelProvider>();
+                  final dev = await provider.apiService.createDevice(widget.channel.id, name, scope: scope);
+                  await provider.loadDevices(widget.channel.id);
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  if (mounted) _showCredentialsDialog(dev);
+                }
+              },
+              child: const Text('Generate Credentials'),
+            ),
+          ],
+          child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               TextField(
                 controller: nameCtrl,
+                autofocus: true,
+                textInputAction: TextInputAction.done,
                 decoration: const InputDecoration(
                   labelText: 'Device Name',
                   hintText: 'e.g. ESP32 Node 1',
+                  prefixIcon: Icon(Icons.developer_board_rounded),
                 ),
               ),
               const SizedBox(height: 16),
@@ -183,29 +215,10 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
                     : scope == 'subscribe'
                         ? 'Device can only subscribe to data and commands.'
                         : 'Full access: device can publish telemetry and receive commands.',
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                style: TextStyle(fontSize: 12, color: context.appColors.textSecondary),
               ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final name = nameCtrl.text.trim();
-                if (name.isNotEmpty) {
-                  final provider = context.read<ChannelProvider>();
-                  final dev = await provider.apiService.createDevice(widget.channel.id, name, scope: scope);
-                  await provider.loadDevices(widget.channel.id);
-                  if (ctx.mounted) Navigator.pop(ctx);
-                  if (mounted) _showCredentialsDialog(dev);
-                }
-              },
-              child: const Text('Generate Credentials'),
-            ),
-          ],
         ),
       ),
     );
@@ -216,20 +229,46 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
     String scope = dev.scope;
     bool isActive = dev.isActive;
 
-    showDialog(
+    showResponsiveModal(
       context: context,
+      maxWidth: 440,
       builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text('Edit ${dev.name} Access Control'),
-          content: Column(
+        builder: (context, setDialogState) => ResponsiveModalScaffold(
+          title: 'Edit ${dev.name}',
+          icon: Icons.edit_outlined,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final provider = context.read<ChannelProvider>();
+                await provider.apiService.updateDevice(
+                  widget.channel.id,
+                  dev.id,
+                  name: nameCtrl.text.trim(),
+                  scope: scope,
+                  isActive: isActive,
+                );
+                await provider.loadDevices(widget.channel.id);
+                if (ctx.mounted) Navigator.pop(ctx);
+              },
+              child: const Text('Save Changes'),
+            ),
+          ],
+          child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               TextField(
                 controller: nameCtrl,
-                decoration: const InputDecoration(labelText: 'Device Name'),
+                decoration: const InputDecoration(
+                  labelText: 'Device Name',
+                  prefixIcon: Icon(Icons.developer_board_rounded),
+                ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Device Active'),
@@ -255,27 +294,6 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
               ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final provider = context.read<ChannelProvider>();
-                await provider.apiService.updateDevice(
-                  widget.channel.id,
-                  dev.id,
-                  name: nameCtrl.text.trim(),
-                  scope: scope,
-                  isActive: isActive,
-                );
-                await provider.loadDevices(widget.channel.id);
-                if (ctx.mounted) Navigator.pop(ctx);
-              },
-              child: const Text('Save Changes'),
-            ),
-          ],
         ),
       ),
     );
@@ -290,181 +308,174 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
     String? sendError;
     String? sendSuccess;
 
-    showDialog(
+    showResponsiveModal(
       context: context,
+      maxWidth: 500,
       builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.send_to_mobile, color: Colors.amberAccent),
-              SizedBox(width: 8),
-              Text('Downlink Device Command'),
-            ],
-          ),
-          content: SizedBox(
-            width: 480,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Publish downstream control actions to IoT devices subscribed to this channel.',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: subtopicCtrl,
-                    decoration: InputDecoration(
-                      labelText: 'MQTT Subtopic',
-                      hintText: 'commands',
-                      prefixText: 'channels/${widget.channel.id}/',
-                      border: const OutlineInputBorder(),
+        builder: (context, setDialogState) {
+          final colors = context.appColors;
+          return ResponsiveModalScaffold(
+            title: 'Downlink Device Command',
+            icon: Icons.send_to_mobile_rounded,
+            iconColor: colors.warning,
+            actions: [
+              TextButton.icon(
+                icon: const Icon(Icons.school_outlined, size: 16),
+                label: const Text('Code Tutorial'),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ApiTutorialScreen(
+                        channel: widget.channel,
+                        initialTabIndex: 3,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 14),
-                  const Text('Quick Action Presets:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      ActionChip(
-                        avatar: const Icon(Icons.power, size: 16, color: Colors.greenAccent),
-                        label: const Text('Relay 1 ON', style: TextStyle(fontSize: 12)),
-                        onPressed: () {
-                          setDialogState(() {
-                            payloadCtrl.text = '{\n  "relay": 1,\n  "state": "ON"\n}';
-                          });
-                        },
-                      ),
-                      ActionChip(
-                        avatar: const Icon(Icons.power_off, size: 16, color: Colors.redAccent),
-                        label: const Text('Relay 1 OFF', style: TextStyle(fontSize: 12)),
-                        onPressed: () {
-                          setDialogState(() {
-                            payloadCtrl.text = '{\n  "relay": 1,\n  "state": "OFF"\n}';
-                          });
-                        },
-                      ),
-                      ActionChip(
-                        avatar: const Icon(Icons.restart_alt, size: 16, color: Colors.amberAccent),
-                        label: const Text('Reboot Node', style: TextStyle(fontSize: 12)),
-                        onPressed: () {
-                          setDialogState(() {
-                            payloadCtrl.text = '{\n  "cmd": "reboot",\n  "force": true\n}';
-                          });
-                        },
-                      ),
-                      ActionChip(
-                        avatar: const Icon(Icons.lightbulb, size: 16, color: Colors.cyanAccent),
-                        label: const Text('LED Toggle', style: TextStyle(fontSize: 12)),
-                        onPressed: () {
-                          setDialogState(() {
-                            payloadCtrl.text = '{\n  "action": "toggle_led",\n  "color": "blue"\n}';
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  const Text('JSON Command Payload:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: payloadCtrl,
-                    maxLines: 6,
-                    style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
-                    decoration: const InputDecoration(
-                      hintText: '{\n  "key": "value"\n}',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  if (sendError != null) ...[
-                    const SizedBox(height: 8),
-                    Text(sendError!, style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
-                  ],
-                  if (sendSuccess != null) ...[
-                    const SizedBox(height: 8),
-                    Text(sendSuccess!, style: const TextStyle(color: Colors.greenAccent, fontSize: 12)),
-                  ],
-                ],
+                  );
+                },
               ),
-            ),
-          ),
-          actions: [
-            TextButton.icon(
-              icon: const Icon(Icons.school_outlined, size: 16),
-              label: const Text('Node Code Tutorial'),
-              onPressed: () {
-                Navigator.pop(ctx);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ApiTutorialScreen(
-                      channel: widget.channel,
-                      initialTabIndex: 3,
-                    ),
-                  ),
-                );
-              },
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Close'),
-            ),
-            ElevatedButton.icon(
-              icon: isSending
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Icon(Icons.send, size: 16),
-              label: const Text('Dispatch Command'),
-              onPressed: isSending
-                  ? null
-                  : () async {
-                      setDialogState(() {
-                        sendError = null;
-                        sendSuccess = null;
-                      });
-
-                      final rawText = payloadCtrl.text.trim();
-                      Map<String, dynamic> parsedJson;
-                      try {
-                        parsedJson = jsonDecode(rawText) as Map<String, dynamic>;
-                      } catch (e) {
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Close'),
+              ),
+              ElevatedButton.icon(
+                icon: isSending
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.send_rounded, size: 16),
+                label: const Text('Dispatch Command'),
+                onPressed: isSending
+                    ? null
+                    : () async {
                         setDialogState(() {
-                          sendError = 'Invalid JSON: $e';
+                          sendError = null;
+                          sendSuccess = null;
                         });
-                        return;
-                      }
 
-                      final subtopic = subtopicCtrl.text.trim().isEmpty ? 'commands' : subtopicCtrl.text.trim();
-
-                      setDialogState(() => isSending = true);
-                      try {
-                        final provider = context.read<ChannelProvider>();
-                        final res = await provider.apiService.sendCommand(
-                          widget.channel.id,
-                          parsedJson,
-                          subtopic: subtopic,
-                        );
-                        setDialogState(() {
-                          isSending = false;
-                          sendSuccess = 'Dispatched to ${res['topic']} successfully!';
-                        });
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Dispatched downlink command to ${res['topic']}')),
-                          );
+                        final rawText = payloadCtrl.text.trim();
+                        Map<String, dynamic> parsedJson;
+                        try {
+                          parsedJson = jsonDecode(rawText) as Map<String, dynamic>;
+                        } catch (e) {
+                          setDialogState(() {
+                            sendError = 'Invalid JSON: $e';
+                          });
+                          return;
                         }
-                      } catch (e) {
+
+                        final subtopic = subtopicCtrl.text.trim().isEmpty ? 'commands' : subtopicCtrl.text.trim();
+
+                        setDialogState(() => isSending = true);
+                        try {
+                          final provider = context.read<ChannelProvider>();
+                          final res = await provider.apiService.sendCommand(
+                            widget.channel.id,
+                            parsedJson,
+                            subtopic: subtopic,
+                          );
+                          setDialogState(() {
+                            isSending = false;
+                            sendSuccess = 'Dispatched to ${res['topic']} successfully!';
+                          });
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Dispatched downlink command to ${res['topic']}')),
+                            );
+                          }
+                        } catch (e) {
+                          setDialogState(() {
+                            isSending = false;
+                            sendError = 'Failed to dispatch: $e';
+                          });
+                        }
+                      },
+              ),
+            ],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Publish downstream control actions to IoT devices subscribed to this channel.',
+                  style: TextStyle(fontSize: 12.5, color: colors.textSecondary),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: subtopicCtrl,
+                  decoration: InputDecoration(
+                    labelText: 'MQTT Subtopic',
+                    hintText: 'commands',
+                    prefixText: 'channels/${widget.channel.id}/',
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const Text('Quick Action Presets:', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    ActionChip(
+                      avatar: Icon(Icons.power, size: 16, color: colors.success),
+                      label: const Text('Relay 1 ON', style: TextStyle(fontSize: 12)),
+                      onPressed: () {
                         setDialogState(() {
-                          isSending = false;
-                          sendError = 'Failed to dispatch: $e';
+                          payloadCtrl.text = '{\n  "relay": 1,\n  "state": "ON"\n}';
                         });
-                      }
-                    },
+                      },
+                    ),
+                    ActionChip(
+                      avatar: Icon(Icons.power_off, size: 16, color: colors.danger),
+                      label: const Text('Relay 1 OFF', style: TextStyle(fontSize: 12)),
+                      onPressed: () {
+                        setDialogState(() {
+                          payloadCtrl.text = '{\n  "relay": 1,\n  "state": "OFF"\n}';
+                        });
+                      },
+                    ),
+                    ActionChip(
+                      avatar: Icon(Icons.restart_alt, size: 16, color: colors.warning),
+                      label: const Text('Reboot Node', style: TextStyle(fontSize: 12)),
+                      onPressed: () {
+                        setDialogState(() {
+                          payloadCtrl.text = '{\n  "cmd": "reboot",\n  "force": true\n}';
+                        });
+                      },
+                    ),
+                    ActionChip(
+                      avatar: Icon(Icons.lightbulb, size: 16, color: colors.accentCyan),
+                      label: const Text('LED Toggle', style: TextStyle(fontSize: 12)),
+                      onPressed: () {
+                        setDialogState(() {
+                          payloadCtrl.text = '{\n  "action": "toggle_led",\n  "color": "blue"\n}';
+                        });
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                const Text('JSON Command Payload:', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: payloadCtrl,
+                  maxLines: 5,
+                  style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+                  decoration: const InputDecoration(
+                    hintText: '{\n  "key": "value"\n}',
+                  ),
+                ),
+                if (sendError != null) ...[
+                  const SizedBox(height: 8),
+                  Text(sendError!, style: TextStyle(color: colors.danger, fontSize: 12)),
+                ],
+                if (sendSuccess != null) ...[
+                  const SizedBox(height: 8),
+                  Text(sendSuccess!, style: TextStyle(color: colors.success, fontSize: 12)),
+                ],
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -475,143 +486,138 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
     String? statusMsg;
     bool isSuccess = false;
 
-    showDialog(
+    showResponsiveModal(
       context: context,
+      maxWidth: 520,
       builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.file_upload, color: Colors.cyanAccent),
-              SizedBox(width: 8),
-              Text('Import Historical Data (CSV)'),
-            ],
-          ),
-          content: SizedBox(
-            width: 520,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Paste CSV data from ThingSpeak or generic IoT platforms. Field columns will be automatically detected and mapped.',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      OutlinedButton.icon(
-                        icon: const Icon(Icons.auto_fix_high, size: 16),
-                        label: const Text('Load Sample ThingSpeak CSV', style: TextStyle(fontSize: 12)),
-                        onPressed: () {
+        builder: (context, setDialogState) {
+          final colors = context.appColors;
+          return ResponsiveModalScaffold(
+            title: 'Import Historical Data (CSV)',
+            icon: Icons.file_upload_rounded,
+            iconColor: colors.accentCyan,
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton.icon(
+                icon: isImporting
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.upload_rounded, size: 16),
+                label: const Text('Start Import'),
+                onPressed: isImporting
+                    ? null
+                    : () async {
+                        final text = csvCtrl.text.trim();
+                        if (text.isEmpty) {
                           setDialogState(() {
-                            final now = DateTime.now().toUtc();
-                            final df = DateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
-                            csvCtrl.text =
-                                'created_at,entry_id,field1,field2\n'
-                                '${df.format(now.subtract(const Duration(minutes: 50)))},1,24.5,60.2\n'
-                                '${df.format(now.subtract(const Duration(minutes: 40)))},2,25.1,58.9\n'
-                                '${df.format(now.subtract(const Duration(minutes: 30)))},3,23.8,62.1\n'
-                                '${df.format(now.subtract(const Duration(minutes: 20)))},4,22.9,64.0\n'
-                                '${df.format(now.subtract(const Duration(minutes: 10)))},5,23.2,63.5\n'
-                                '${df.format(now)},6,24.0,61.0';
+                            statusMsg = 'Please paste CSV content before importing.';
+                            isSuccess = false;
                           });
-                        },
-                      ),
-                      const SizedBox(width: 8),
-                      OutlinedButton.icon(
-                        icon: const Icon(Icons.clear_all, size: 16),
-                        label: const Text('Clear', style: TextStyle(fontSize: 12)),
-                        onPressed: () => setDialogState(() => csvCtrl.clear()),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: csvCtrl,
-                    maxLines: 8,
-                    style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
-                    decoration: const InputDecoration(
-                      hintText: 'created_at,field1,field2\n2026-11-12T00:00:00Z,23.5,65.0\n...',
-                      border: OutlineInputBorder(),
+                          return;
+                        }
+
+                        setDialogState(() {
+                          isImporting = true;
+                          statusMsg = null;
+                        });
+
+                        try {
+                          final provider = context.read<ChannelProvider>();
+                          final res = await provider.apiService.importTelemetryCsv(widget.channel.id, text);
+                          final count = res['points_imported'] ?? 0;
+                          final fields = (res['fields_discovered'] as List?)?.join(', ') ?? '';
+
+                          await Future.wait([
+                            provider.loadFields(widget.channel.id),
+                            provider.loadHistoricalData(widget.channel.id, resolution: provider.currentResolution),
+                            provider.loadLatestSnapshot(widget.channel.id),
+                          ]);
+
+                          setDialogState(() {
+                            isImporting = false;
+                            isSuccess = true;
+                            statusMsg = 'Success! Imported $count points across fields: $fields';
+                          });
+
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Successfully imported $count points ($fields)')),
+                            );
+                          }
+                        } catch (e) {
+                          setDialogState(() {
+                            isImporting = false;
+                            isSuccess = false;
+                            statusMsg = 'Import failed: $e';
+                          });
+                        }
+                      },
+              ),
+            ],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Paste CSV data from ThingSpeak or generic IoT platforms. Field columns will be automatically detected and mapped.',
+                  style: TextStyle(fontSize: 12.5, color: colors.textSecondary),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.auto_fix_high, size: 16),
+                      label: const Text('Load Sample CSV', style: TextStyle(fontSize: 12)),
+                      onPressed: () {
+                        setDialogState(() {
+                          final now = DateTime.now().toUtc();
+                          final df = DateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+                          csvCtrl.text =
+                              'created_at,entry_id,field1,field2\n'
+                              '${df.format(now.subtract(const Duration(minutes: 50)))},1,24.5,60.2\n'
+                              '${df.format(now.subtract(const Duration(minutes: 40)))},2,25.1,58.9\n'
+                              '${df.format(now.subtract(const Duration(minutes: 30)))},3,23.8,62.1\n'
+                              '${df.format(now.subtract(const Duration(minutes: 20)))},4,22.9,64.0\n'
+                              '${df.format(now.subtract(const Duration(minutes: 10)))},5,23.2,63.5\n'
+                              '${df.format(now)},6,24.0,61.0';
+                        });
+                      },
                     ),
-                  ),
-                  if (statusMsg != null) ...[
-                    const SizedBox(height: 10),
-                    Text(
-                      statusMsg!,
-                      style: TextStyle(
-                        color: isSuccess ? Colors.greenAccent : Colors.redAccent,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.clear_all, size: 16),
+                      label: const Text('Clear', style: TextStyle(fontSize: 12)),
+                      onPressed: () => setDialogState(() => csvCtrl.clear()),
                     ),
                   ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: csvCtrl,
+                  maxLines: 7,
+                  style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                  decoration: const InputDecoration(
+                    hintText: 'created_at,field1,field2\n2026-11-12T00:00:00Z,23.5,65.0\n...',
+                  ),
+                ),
+                if (statusMsg != null) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    statusMsg!,
+                    style: TextStyle(
+                      color: isSuccess ? colors.success : colors.danger,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ],
-              ),
+              ],
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton.icon(
-              icon: isImporting
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Icon(Icons.upload, size: 16),
-              label: const Text('Start Import'),
-              onPressed: isImporting
-                  ? null
-                  : () async {
-                      final text = csvCtrl.text.trim();
-                      if (text.isEmpty) {
-                        setDialogState(() {
-                          statusMsg = 'Please paste CSV content before importing.';
-                          isSuccess = false;
-                        });
-                        return;
-                      }
-
-                      setDialogState(() {
-                        isImporting = true;
-                        statusMsg = null;
-                      });
-
-                      try {
-                        final provider = context.read<ChannelProvider>();
-                        final res = await provider.apiService.importTelemetryCsv(widget.channel.id, text);
-                        final count = res['points_imported'] ?? 0;
-                        final fields = (res['fields_discovered'] as List?)?.join(', ') ?? '';
-
-                        await Future.wait([
-                          provider.loadFields(widget.channel.id),
-                          provider.loadHistoricalData(widget.channel.id, resolution: provider.currentResolution),
-                          provider.loadLatestSnapshot(widget.channel.id),
-                        ]);
-
-                        setDialogState(() {
-                          isImporting = false;
-                          isSuccess = true;
-                          statusMsg = 'Success! Imported $count points across fields: $fields';
-                        });
-
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Successfully imported $count points ($fields)')),
-                          );
-                        }
-                      } catch (e) {
-                        setDialogState(() {
-                          isImporting = false;
-                          isSuccess = false;
-                          statusMsg = 'Import failed: $e';
-                        });
-                      }
-                    },
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -623,172 +629,183 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
     bool isExporting = false;
     String? exportedData;
 
-    showDialog(
+    showResponsiveModal(
       context: context,
+      maxWidth: 500,
       builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.download, color: Colors.cyanAccent),
-              SizedBox(width: 8),
-              Text('Export Channel Telemetry'),
+        builder: (context, setDialogState) {
+          final colors = context.appColors;
+          return ResponsiveModalScaffold(
+            title: 'Export Channel Telemetry',
+            icon: Icons.download_rounded,
+            iconColor: colors.accentCyan,
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Close'),
+              ),
+              if (exportedData != null)
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.copy, size: 16),
+                  label: const Text('Copy to Clipboard'),
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: exportedData!));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Exported data copied to clipboard!')),
+                    );
+                  },
+                )
+              else
+                ElevatedButton.icon(
+                  icon: isExporting
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.file_download),
+                  label: Text(isExporting ? 'Fetching...' : 'Fetch & Export'),
+                  onPressed: isExporting
+                      ? null
+                      : () async {
+                          setDialogState(() => isExporting = true);
+                          try {
+                            final now = DateTime.now();
+                            DateTime? start;
+                            if (range == '24h') start = now.subtract(const Duration(hours: 24));
+                            if (range == '7d') start = now.subtract(const Duration(days: 7));
+                            if (range == '30d') start = now.subtract(const Duration(days: 30));
+
+                            final provider = context.read<ChannelProvider>();
+                            final data = await provider.apiService.exportTelemetry(
+                              widget.channel.id,
+                              format: format,
+                              resolution: resolution,
+                              start: start,
+                              end: now,
+                            );
+
+                            setDialogState(() {
+                              isExporting = false;
+                              exportedData = data;
+                            });
+                          } catch (e) {
+                            setDialogState(() => isExporting = false);
+                            if (ctx.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Export failed: $e')),
+                              );
+                            }
+                          }
+                        },
+                ),
             ],
-          ),
-          content: SizedBox(
-            width: 480,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('File Format:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                  const SizedBox(height: 6),
-                  SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(value: 'csv', label: Text('CSV Spreadsheet'), icon: Icon(Icons.table_chart, size: 16)),
-                      ButtonSegment(value: 'json', label: Text('JSON Array'), icon: Icon(Icons.data_object, size: 16)),
-                    ],
-                    selected: {format},
-                    onSelectionChanged: (s) => setDialogState(() => format = s.first),
-                  ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('File Format:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ChoiceChip(
+                      avatar: const Icon(Icons.table_chart, size: 16),
+                      label: const Text('CSV Spreadsheet'),
+                      selected: format == 'csv',
+                      onSelected: (_) => setDialogState(() => format = 'csv'),
+                    ),
+                    ChoiceChip(
+                      avatar: const Icon(Icons.data_object, size: 16),
+                      label: const Text('JSON Array'),
+                      selected: format == 'json',
+                      onSelected: (_) => setDialogState(() => format = 'json'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                const Text('Time Range:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: const [
+                    ('24h', '24 Hours'),
+                    ('7d', '7 Days'),
+                    ('30d', '30 Days'),
+                    ('all', 'All Time'),
+                  ].map((opt) {
+                    return ChoiceChip(
+                      label: Text(opt.$2),
+                      selected: range == opt.$1,
+                      onSelected: (_) => setDialogState(() => range = opt.$1),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 14),
+                const Text('Resolution / Aggregation:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: const [
+                    ('raw', 'Raw Points'),
+                    ('1m', '1-Min Avg'),
+                    ('1h', '1-Hour Avg'),
+                  ].map((opt) {
+                    return ChoiceChip(
+                      label: Text(opt.$2),
+                      selected: resolution == opt.$1,
+                      onSelected: (_) => setDialogState(() => resolution = opt.$1),
+                    );
+                  }).toList(),
+                ),
+                if (exportedData != null) ...[
                   const SizedBox(height: 16),
-                  const Text('Time Range:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  const Text('Export Preview:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                   const SizedBox(height: 6),
-                  SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(value: '24h', label: Text('24 Hours')),
-                      ButtonSegment(value: '7d', label: Text('7 Days')),
-                      ButtonSegment(value: '30d', label: Text('30 Days')),
-                      ButtonSegment(value: 'all', label: Text('All Time')),
-                    ],
-                    selected: {range},
-                    onSelectionChanged: (s) => setDialogState(() => range = s.first),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text('Resolution / Aggregation:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                  const SizedBox(height: 6),
-                  SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(value: 'raw', label: Text('Raw Points')),
-                      ButtonSegment(value: '1m', label: Text('1-Minute Avg')),
-                      ButtonSegment(value: '1h', label: Text('1-Hour Avg')),
-                    ],
-                    selected: {resolution},
-                    onSelectionChanged: (s) => setDialogState(() => resolution = s.first),
-                  ),
-                  if (exportedData != null) ...[
-                    const SizedBox(height: 16),
-                    const Text('Export Preview:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                    const SizedBox(height: 6),
-                    Container(
-                      height: 120,
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: context.appColors.codeBg,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: context.appColors.border),
-                      ),
-                      child: SingleChildScrollView(
-                        child: SelectableText(
-                          exportedData!,
-                          style: TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 11,
-                            color: context.appColors.codeText,
-                          ),
+                  Container(
+                    height: 120,
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: colors.codeBg,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: colors.border),
+                    ),
+                    child: SingleChildScrollView(
+                      child: SelectableText(
+                        exportedData!,
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 11,
+                          color: colors.codeText,
                         ),
                       ),
                     ),
-                  ],
+                  ),
                 ],
-              ),
+              ],
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Close'),
-            ),
-            if (exportedData != null)
-              ElevatedButton.icon(
-                icon: const Icon(Icons.copy, size: 16),
-                label: const Text('Copy to Clipboard'),
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: exportedData!));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Exported data copied to clipboard!')),
-                  );
-                },
-              )
-            else
-              ElevatedButton.icon(
-                icon: isExporting
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(Icons.file_download),
-                label: Text(isExporting ? 'Fetching...' : 'Fetch & Export'),
-                onPressed: isExporting
-                    ? null
-                    : () async {
-                        setDialogState(() => isExporting = true);
-                        try {
-                          final now = DateTime.now();
-                          DateTime? start;
-                          if (range == '24h') start = now.subtract(const Duration(hours: 24));
-                          if (range == '7d') start = now.subtract(const Duration(days: 7));
-                          if (range == '30d') start = now.subtract(const Duration(days: 30));
-
-                          final provider = context.read<ChannelProvider>();
-                          final data = await provider.apiService.exportTelemetry(
-                            widget.channel.id,
-                            format: format,
-                            resolution: resolution,
-                            start: start,
-                            end: now,
-                          );
-
-                          setDialogState(() {
-                            isExporting = false;
-                            exportedData = data;
-                          });
-                        } catch (e) {
-                          setDialogState(() => isExporting = false);
-                          if (ctx.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Export failed: $e')),
-                            );
-                          }
-                        }
-                      },
-              ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 
   void _showClearDataDialog() {
-    showDialog(
+    final colors = context.appColors;
+    showResponsiveModal(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.redAccent),
-            SizedBox(width: 8),
-            Text('Clear Telemetry Data'),
-          ],
-        ),
-        content: Text(
-          'Are you sure you want to permanently delete all recorded data points and message history for channel "${widget.channel.name}"?\n\n'
-          'Channel field definitions will be preserved, but all historical time-series entries will be permanently erased. This action cannot be undone.',
-        ),
+      maxWidth: 440,
+      builder: (ctx) => ResponsiveModalScaffold(
+        title: 'Clear Telemetry Data',
+        icon: Icons.warning_amber_rounded,
+        iconColor: colors.danger,
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade700, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: colors.danger, foregroundColor: Colors.white),
             onPressed: () async {
               Navigator.pop(ctx);
               final provider = context.read<ChannelProvider>();
@@ -815,6 +832,11 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
             child: const Text('Clear All Data'),
           ),
         ],
+        child: Text(
+          'Are you sure you want to permanently delete all recorded data points and message history for channel "${widget.channel.name}"?\n\n'
+          'Channel field definitions will be preserved, but all historical time-series entries will be permanently erased. This action cannot be undone.',
+          style: TextStyle(color: colors.textSecondary, height: 1.45),
+        ),
       ),
     );
   }
@@ -823,114 +845,107 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
     final config = AppConfig();
     Device currentDev = dev;
 
-    showDialog(
+    showResponsiveModal(
       context: context,
+      maxWidth: 480,
       builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Row(
-            children: [
-              const Icon(Icons.vpn_key, color: Colors.amber),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text('Device Credentials (${currentDev.name})', overflow: TextOverflow.ellipsis),
-              ),
-            ],
-          ),
-          content: SizedBox(
-            width: 480,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'These credentials allow your IoT hardware node to authenticate with the ThingLarp MQTT broker. You can view or copy them anytime.',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 16),
-                  _CopyableField(label: 'MQTT Broker Host', value: config.mqttHost),
-                  const SizedBox(height: 10),
-                  _CopyableField(label: 'Port (TLS / Standard)', value: '${config.mqttPort} (MQTTS 8883 / MQTT 1883)'),
-                  const SizedBox(height: 10),
-                  _CopyableField(label: 'MQTT Username', value: currentDev.mqttUsername),
-                  const SizedBox(height: 10),
-                  _CopyableField(label: 'MQTT Password', value: currentDev.mqttPassword ?? 'Not saved (Legacy)'),
-                  const SizedBox(height: 10),
-                  _CopyableField(label: 'Telemetry Publish Topic', value: 'channels/${widget.channel.id}/data'),
-                  const SizedBox(height: 10),
-                  _CopyableField(label: 'Downlink Subscribe Topic', value: 'channels/${widget.channel.id}/commands'),
-                  const SizedBox(height: 10),
-                  _CopyableField(label: 'Permission Scope', value: currentDev.scope.toUpperCase()),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton.icon(
-              icon: const Icon(Icons.refresh, size: 16, color: Colors.amberAccent),
-              label: const Text('Reset Password'),
-              onPressed: () async {
-                final confirm = await showDialog<bool>(
-                  context: ctx,
-                  builder: (c) => AlertDialog(
-                    title: const Text('Reset Device Password?'),
-                    content: Text('Generate a new MQTT password for "${currentDev.name}"? Any active connection with the old password will be rejected.'),
-                    actions: [
-                      TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.amber.shade800, foregroundColor: Colors.white),
-                        onPressed: () => Navigator.pop(c, true),
-                        child: const Text('Generate New Password'),
-                      ),
-                    ],
-                  ),
-                );
+        builder: (context, setDialogState) {
+          final colors = context.appColors;
+          return ResponsiveModalScaffold(
+            title: 'Credentials (${currentDev.name})',
+            icon: Icons.vpn_key_rounded,
+            iconColor: colors.warning,
+            actions: [
+              TextButton.icon(
+                icon: Icon(Icons.refresh, size: 16, color: colors.warning),
+                label: const Text('Reset Password'),
+                onPressed: () async {
+                  final confirm = await showDialog<bool>(
+                    context: ctx,
+                    builder: (c) => AlertDialog(
+                      title: const Text('Reset Device Password?'),
+                      content: Text('Generate a new MQTT password for "${currentDev.name}"? Any active connection with the old password will be rejected.'),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(backgroundColor: colors.warning, foregroundColor: Colors.white),
+                          onPressed: () => Navigator.pop(c, true),
+                          child: const Text('Generate New Password'),
+                        ),
+                      ],
+                    ),
+                  );
 
-                if (confirm == true && ctx.mounted) {
-                  try {
-                    final provider = ctx.read<ChannelProvider>();
-                    final updated = await provider.apiService.resetDevicePassword(widget.channel.id, currentDev.id);
-                    await provider.loadDevices(widget.channel.id);
-                    setDialogState(() {
-                      currentDev = updated;
-                    });
-                    if (ctx.mounted) {
-                      ScaffoldMessenger.of(ctx).showSnackBar(
-                        const SnackBar(content: Text('Device password reset successfully!')),
-                      );
-                    }
-                  } catch (e) {
-                    if (ctx.mounted) {
-                      ScaffoldMessenger.of(ctx).showSnackBar(
-                        SnackBar(content: Text('Failed to reset password: $e')),
-                      );
+                  if (confirm == true && ctx.mounted) {
+                    try {
+                      final provider = ctx.read<ChannelProvider>();
+                      final updated = await provider.apiService.resetDevicePassword(widget.channel.id, currentDev.id);
+                      await provider.loadDevices(widget.channel.id);
+                      setDialogState(() {
+                        currentDev = updated;
+                      });
+                      if (ctx.mounted) {
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          const SnackBar(content: Text('Device password reset successfully!')),
+                        );
+                      }
+                    } catch (e) {
+                      if (ctx.mounted) {
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          SnackBar(content: Text('Failed to reset password: $e')),
+                        );
+                      }
                     }
                   }
-                }
-              },
-            ),
-            TextButton.icon(
-              icon: const Icon(Icons.code, size: 18),
-              label: const Text('MQTT Code Examples'),
-              onPressed: () {
-                Navigator.pop(ctx);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ApiTutorialScreen(
-                      channel: widget.channel,
-                      initialTabIndex: 3,
+                },
+              ),
+              TextButton.icon(
+                icon: const Icon(Icons.code, size: 18),
+                label: const Text('MQTT Examples'),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ApiTutorialScreen(
+                        channel: widget.channel,
+                        initialTabIndex: 3,
+                      ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Close'),
+              ),
+            ],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'These credentials allow your IoT hardware node to authenticate with the ThingLarp MQTT broker. Tap copy icons to grab values.',
+                  style: TextStyle(fontSize: 12.5, color: colors.textSecondary),
+                ),
+                const SizedBox(height: 14),
+                _CopyableField(label: 'MQTT Broker Host', value: config.mqttHost),
+                const SizedBox(height: 10),
+                _CopyableField(label: 'Port (TLS / Standard)', value: '${config.mqttPort} (MQTTS 8883 / MQTT 1883)'),
+                const SizedBox(height: 10),
+                _CopyableField(label: 'MQTT Username', value: currentDev.mqttUsername),
+                const SizedBox(height: 10),
+                _CopyableField(label: 'MQTT Password', value: currentDev.mqttPassword ?? 'Not saved (Legacy)'),
+                const SizedBox(height: 10),
+                _CopyableField(label: 'Telemetry Publish Topic', value: 'channels/${widget.channel.id}/data'),
+                const SizedBox(height: 10),
+                _CopyableField(label: 'Downlink Subscribe Topic', value: 'channels/${widget.channel.id}/commands'),
+                const SizedBox(height: 10),
+                _CopyableField(label: 'Permission Scope', value: currentDev.scope.toUpperCase()),
+              ],
             ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Close'),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -938,76 +953,19 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
   void _showApiKeyDetailsDialog(ApiKeyItem key) {
     final config = AppConfig();
     final fullKey = key.apiKey ?? '${key.prefix}***';
+    final colors = context.appColors;
 
-    showDialog(
+    showResponsiveModal(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(
-              key.scope == 'write' ? Icons.upload : Icons.download,
-              color: key.scope == 'write' ? Colors.greenAccent : Colors.blueAccent,
-            ),
-            const SizedBox(width: 8),
-            Text('${key.scope.toUpperCase()} API Key Details'),
-          ],
-        ),
-        content: SizedBox(
-          width: 500,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Use this API key to authenticate HTTP REST requests with the ThingLarp API.',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                const SizedBox(height: 16),
-                _CopyableField(label: 'API Base URL', value: config.apiUrl),
-                const SizedBox(height: 10),
-                _CopyableField(label: 'Channel ID', value: widget.channel.id.toString()),
-                const SizedBox(height: 10),
-                _CopyableField(label: 'API Key (X-API-Key)', value: fullKey),
-                const SizedBox(height: 10),
-                _CopyableField(label: 'HTTP Auth Header', value: 'X-API-Key: $fullKey'),
-                const SizedBox(height: 10),
-                _CopyableField(
-                  label: key.scope == 'write' ? 'Telemetry Ingest Endpoint' : 'Telemetry Query Endpoint',
-                  value: '${config.apiUrl}/channels/${widget.channel.id}/data',
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  key.scope == 'write' ? 'Sample Ingest Command (cURL):' : 'Sample Query Command (cURL):',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: context.appColors.codeBg,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: context.appColors.border),
-                  ),
-                  child: SelectableText(
-                    key.scope == 'write'
-                        ? 'curl -X POST "${config.apiUrl}/channels/${widget.channel.id}/data" \\\n  -H "Content-Type: application/json" \\\n  -H "X-API-Key: $fullKey" \\\n  -d \'{"temp": 24.5, "humidity": 60}\''
-                        : 'curl -X GET "${config.apiUrl}/channels/${widget.channel.id}/data?resolution=auto" \\\n  -H "X-API-Key: $fullKey"',
-                    style: TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 11,
-                      color: context.appColors.codeText,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+      maxWidth: 500,
+      builder: (ctx) => ResponsiveModalScaffold(
+        title: '${key.scope.toUpperCase()} API Key Details',
+        icon: key.scope == 'write' ? Icons.upload_rounded : Icons.download_rounded,
+        iconColor: key.scope == 'write' ? colors.success : colors.primary,
         actions: [
           TextButton.icon(
             icon: const Icon(Icons.code, size: 16),
-            label: const Text('View All Tutorials'),
+            label: const Text('View Tutorials'),
             onPressed: () {
               Navigator.pop(ctx);
               Navigator.push(
@@ -1026,6 +984,57 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
             child: const Text('Close'),
           ),
         ],
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Use this API key to authenticate HTTP REST requests with the ThingLarp API.',
+              style: TextStyle(fontSize: 12.5, color: colors.textSecondary),
+            ),
+            const SizedBox(height: 14),
+            _CopyableField(label: 'API Base URL', value: config.apiUrl),
+            const SizedBox(height: 10),
+            _CopyableField(label: 'Channel ID', value: widget.channel.id.toString()),
+            const SizedBox(height: 10),
+            _CopyableField(label: 'API Key (X-API-Key)', value: fullKey),
+            const SizedBox(height: 10),
+            _CopyableField(label: 'HTTP Auth Header', value: 'X-API-Key: $fullKey'),
+            const SizedBox(height: 10),
+            _CopyableField(
+              label: key.scope == 'write' ? 'Telemetry Ingest Endpoint' : 'Telemetry Query Endpoint',
+              value: '${config.apiUrl}/channels/${widget.channel.id}/data',
+            ),
+            const SizedBox(height: 14),
+            Text(
+              key.scope == 'write' ? 'Sample Ingest Command (cURL):' : 'Sample Query Command (cURL):',
+              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 6),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: colors.codeBg,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: colors.border),
+              ),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SelectableText(
+                  key.scope == 'write'
+                      ? 'curl -X POST "${config.apiUrl}/channels/${widget.channel.id}/data" \\\n  -H "Content-Type: application/json" \\\n  -H "X-API-Key: $fullKey" \\\n  -d \'{"temp": 24.5, "humidity": 60}\''
+                      : 'curl -X GET "${config.apiUrl}/channels/${widget.channel.id}/data?resolution=auto" \\\n  -H "X-API-Key: $fullKey"',
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 11,
+                    color: colors.codeText,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1033,13 +1042,34 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
   void _showCreateApiKeyDialog() {
     String scope = 'write';
 
-    showDialog(
+    showResponsiveModal(
       context: context,
+      maxWidth: 420,
       builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Generate API Key'),
-          content: Column(
+        builder: (context, setDialogState) => ResponsiveModalScaffold(
+          title: 'Generate API Key',
+          icon: Icons.key_rounded,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final provider = context.read<ChannelProvider>();
+                final keyItem = await provider.apiService.createApiKey(widget.channel.id, scope);
+                await provider.loadApiKeys(widget.channel.id);
+                if (ctx.mounted) Navigator.pop(ctx);
+                if (mounted && keyItem.apiKey != null) {
+                  _showApiKeyCreatedDialog(keyItem.apiKey!);
+                }
+              },
+              child: const Text('Generate'),
+            ),
+          ],
+          child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               SegmentedButton<String>(
                 segments: const [
@@ -1061,50 +1091,24 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
               ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final provider = context.read<ChannelProvider>();
-                final keyItem = await provider.apiService.createApiKey(widget.channel.id, scope);
-                await provider.loadApiKeys(widget.channel.id);
-                if (ctx.mounted) Navigator.pop(ctx);
-                if (mounted && keyItem.apiKey != null) {
-                  _showApiKeyCreatedDialog(keyItem.apiKey!);
-                }
-              },
-              child: const Text('Generate'),
-            ),
-          ],
         ),
       ),
     );
   }
 
   void _showApiKeyCreatedDialog(String keyStr) {
-    showDialog(
+    final colors = context.appColors;
+    showResponsiveModal(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('API Key Generated'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Use this key in your HTTP requests as header:\nX-API-Key: <key>',
-              style: TextStyle(fontSize: 13, color: Colors.grey),
-            ),
-            const SizedBox(height: 16),
-            _CopyableField(label: 'API Key', value: keyStr),
-          ],
-        ),
+      maxWidth: 460,
+      builder: (ctx) => ResponsiveModalScaffold(
+        title: 'API Key Generated',
+        icon: Icons.verified_rounded,
+        iconColor: colors.success,
         actions: [
           TextButton.icon(
             icon: const Icon(Icons.code, size: 18),
-            label: const Text('View API Code Snippets'),
+            label: const Text('Code Snippets'),
             onPressed: () {
               Navigator.pop(ctx);
               Navigator.push(
@@ -1123,6 +1127,18 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
             child: const Text('Done'),
           ),
         ],
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Use this key in your HTTP requests as header:\nX-API-Key: <key>',
+              style: TextStyle(fontSize: 13, color: colors.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            _CopyableField(label: 'API Key', value: keyStr),
+          ],
+        ),
       ),
     );
   }
@@ -1131,12 +1147,38 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
   Widget build(BuildContext context) {
     final provider = context.watch<ChannelProvider>();
     final colors = context.appColors;
+    final isPhone = context.isCompactPhone;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final currentTab = widget.isReadOnly ? 0 : _tabController.index;
+
+    Widget? fab;
+    if (!widget.isReadOnly) {
+      if (currentTab == 1) {
+        fab = FloatingActionButton.extended(
+          onPressed: _showAddDeviceDialog,
+          icon: const Icon(Icons.add),
+          label: const Text('Add Device'),
+        );
+      } else if (currentTab == 2) {
+        fab = FloatingActionButton.extended(
+          onPressed: _showCreateApiKeyDialog,
+          icon: const Icon(Icons.add),
+          label: const Text('New Key'),
+        );
+      }
+    }
 
     return Scaffold(
       appBar: AppBar(
+        titleSpacing: isPhone ? 8 : 16,
         title: Row(
           children: [
-            Expanded(child: Text(widget.channel.name, overflow: TextOverflow.ellipsis)),
+            Flexible(
+              child: Text(
+                widget.channel.name,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
             if (widget.isReadOnly) ...[
               const SizedBox(width: 8),
               AppStatusPill(label: 'VIEW ONLY', color: colors.primary),
@@ -1144,10 +1186,11 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
           ],
         ),
         actions: [
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 4),
-            child: AppThemeToggleButton(),
-          ),
+          if (!isPhone)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4),
+              child: AppThemeToggleButton(),
+            ),
           if (widget.isReadOnly) ...[
             IconButton(
               icon: const Icon(Icons.refresh),
@@ -1158,20 +1201,22 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
                 provider.loadLatestSnapshot(widget.channel.id);
               },
             ),
-            IconButton(
-              icon: Icon(Icons.share, color: colors.accentTeal),
-              tooltip: 'Share Public Link',
-              onPressed: _shareChannelLink,
-            ),
+            if (!isPhone)
+              IconButton(
+                icon: Icon(Icons.share, color: colors.accentTeal),
+                tooltip: 'Share Public Link',
+                onPressed: _shareChannelLink,
+              ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              padding: EdgeInsets.symmetric(horizontal: isPhone ? 2 : 8, vertical: 10),
               child: ElevatedButton.icon(
-                icon: const Icon(Icons.login, size: 16),
-                label: const Text('Sign In'),
+                icon: const Icon(Icons.login, size: 15),
+                label: Text(isPhone ? 'Login' : 'Sign In'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: colors.primary,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding: EdgeInsets.symmetric(horizontal: isPhone ? 10 : 12),
+                  visualDensity: isPhone ? VisualDensity.compact : VisualDensity.standard,
                 ),
                 onPressed: () {
                   Navigator.pushReplacement(
@@ -1181,45 +1226,164 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
                 },
               ),
             ),
+            if (isPhone)
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert),
+                onSelected: (val) {
+                  if (val == 'share') _shareChannelLink();
+                  if (val == 'theme') {
+                    ThemeProvider.maybeOf(context, listen: false)
+                        ?.toggleBrightness(Theme.of(context).brightness);
+                  }
+                },
+                itemBuilder: (ctx) => [
+                  PopupMenuItem(
+                    value: 'share',
+                    child: Row(
+                      children: [
+                        Icon(Icons.share, size: 20, color: colors.accentTeal),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Text(
+                            'Share Public Link',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'theme',
+                    child: Row(
+                      children: [
+                        Icon(
+                          isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                          size: 20,
+                          color: isDark ? colors.warning : colors.primary,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            isDark ? 'Light Mode' : 'Dark Mode',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
           ] else ...[
             IconButton(
               icon: Icon(Icons.share, color: colors.accentTeal),
               tooltip: 'Share Public Link',
               onPressed: _shareChannelLink,
             ),
-            IconButton(
-              icon: Icon(Icons.send_to_mobile, color: colors.warning),
-              tooltip: 'Downlink Commands',
-              onPressed: _showCommandsDialog,
-            ),
-            IconButton(
-              icon: Icon(Icons.school_outlined, color: colors.accentCyan),
-              tooltip: 'API Tutorials & Code Generator',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ApiTutorialScreen(channel: widget.channel),
-                  ),
-                );
-              },
-            ),
+            if (!isPhone) ...[
+              IconButton(
+                icon: Icon(Icons.send_to_mobile, color: colors.warning),
+                tooltip: 'Downlink Commands',
+                onPressed: _showCommandsDialog,
+              ),
+              IconButton(
+                icon: Icon(Icons.school_outlined, color: colors.accentCyan),
+                tooltip: 'API Tutorials & Code Generator',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ApiTutorialScreen(channel: widget.channel),
+                    ),
+                  );
+                },
+              ),
+            ],
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert),
               tooltip: 'Channel Actions',
               onSelected: (val) {
+                if (val == 'theme') {
+                  ThemeProvider.maybeOf(context, listen: false)
+                      ?.toggleBrightness(Theme.of(context).brightness);
+                }
+                if (val == 'commands') _showCommandsDialog();
+                if (val == 'tutorials') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ApiTutorialScreen(channel: widget.channel),
+                    ),
+                  );
+                }
                 if (val == 'export') _showExportDialog();
                 if (val == 'import') _showImportDialog();
                 if (val == 'clear') _showClearDataDialog();
               },
               itemBuilder: (context) => [
+                if (isPhone) ...[
+                  PopupMenuItem(
+                    value: 'commands',
+                    child: Row(
+                      children: [
+                        Icon(Icons.send_to_mobile, size: 20, color: colors.warning),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Text(
+                            'Downlink Commands',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'tutorials',
+                    child: Row(
+                      children: [
+                        Icon(Icons.school_outlined, size: 20, color: colors.accentCyan),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Text(
+                            'API & Code Tutorials',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'theme',
+                    child: Row(
+                      children: [
+                        Icon(
+                          isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                          size: 20,
+                          color: isDark ? colors.warning : colors.primary,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuDivider(),
+                ],
                 PopupMenuItem(
                   value: 'export',
                   child: Row(
                     children: [
                       Icon(Icons.download, size: 20, color: colors.accentCyan),
                       const SizedBox(width: 10),
-                      const Text('Download / Export Data'),
+                      const Expanded(
+                        child: Text(
+                          'Download / Export Data',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -1229,7 +1393,12 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
                     children: [
                       Icon(Icons.upload_file, size: 20, color: colors.accentTeal),
                       const SizedBox(width: 10),
-                      const Text('Import Data (CSV)'),
+                      const Expanded(
+                        child: Text(
+                          'Import Data (CSV)',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -1239,7 +1408,12 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
                     children: [
                       Icon(Icons.delete_sweep, size: 20, color: colors.danger),
                       const SizedBox(width: 10),
-                      const Text('Clear All Telemetry Data'),
+                      const Expanded(
+                        child: Text(
+                          'Clear All Telemetry Data',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -1247,7 +1421,7 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
             ),
           ],
         ],
-        bottom: widget.isReadOnly
+        bottom: (widget.isReadOnly || isPhone)
             ? null
             : TabBar(
                 controller: _tabController,
@@ -1258,16 +1432,52 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
                 ],
               ),
       ),
-      body: widget.isReadOnly
-          ? _buildTelemetryTab(provider)
-          : TabBarView(
-              controller: _tabController,
-              children: [
-                _buildTelemetryTab(provider),
-                _buildDevicesTab(provider),
-                _buildApiKeysTab(provider),
-              ],
-            ),
+      body: SafeArea(
+        top: false,
+        bottom: widget.isReadOnly || !isPhone,
+        child: widget.isReadOnly
+            ? _buildTelemetryTab(provider)
+            : TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildTelemetryTab(provider),
+                  _buildDevicesTab(provider),
+                  _buildApiKeysTab(provider),
+                ],
+              ),
+      ),
+      floatingActionButton: fab,
+      bottomNavigationBar: (!widget.isReadOnly && isPhone)
+          ? DecoratedBox(
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: colors.border)),
+              ),
+              child: NavigationBar(
+                selectedIndex: currentTab,
+                onDestinationSelected: (idx) {
+                  _tabController.animateTo(idx);
+                  setState(() {});
+                },
+                destinations: const [
+                  NavigationDestination(
+                    icon: Icon(Icons.dashboard_outlined),
+                    selectedIcon: Icon(Icons.dashboard_rounded),
+                    label: 'Telemetry',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.memory_outlined),
+                    selectedIcon: Icon(Icons.memory_rounded),
+                    label: 'Devices',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.key_outlined),
+                    selectedIcon: Icon(Icons.key_rounded),
+                    label: 'API Keys',
+                  ),
+                ],
+              ),
+            )
+          : null,
     );
   }
 
@@ -1277,42 +1487,13 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
     final ctrl = TextEditingController(text: provider.pointLimit.toString());
     String? errorText;
 
-    final chosen = await showDialog<int>(
+    final chosen = await showResponsiveModal<int>(
       context: context,
+      maxWidth: 420,
       builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Custom Data Amount'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Enter the number of newest points per field to display (1 – 10,000):',
-                style: TextStyle(fontSize: 13, color: Colors.grey),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: ctrl,
-                keyboardType: TextInputType.number,
-                autofocus: true,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: InputDecoration(
-                  labelText: 'Points per field',
-                  hintText: 'e.g. 250',
-                  errorText: errorText,
-                  border: const OutlineInputBorder(),
-                ),
-                onSubmitted: (_) {
-                  final parsed = int.tryParse(ctrl.text.trim());
-                  if (parsed == null || parsed < 1 || parsed > ChannelProvider.maxPointLimit) {
-                    setDialogState(() => errorText = 'Enter a value between 1 and ${ChannelProvider.maxPointLimit}');
-                  } else {
-                    Navigator.pop(ctx, parsed);
-                  }
-                },
-              ),
-            ],
-          ),
+        builder: (context, setDialogState) => ResponsiveModalScaffold(
+          title: 'Custom Data Amount',
+          icon: Icons.format_list_numbered_rounded,
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
@@ -1330,6 +1511,37 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
               child: const Text('Apply'),
             ),
           ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Enter the number of newest points per field to display (1 – 10,000):',
+                style: TextStyle(fontSize: 13, color: context.appColors.textSecondary),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: ctrl,
+                keyboardType: TextInputType.number,
+                autofocus: true,
+                textInputAction: TextInputAction.done,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: InputDecoration(
+                  labelText: 'Points per field',
+                  hintText: 'e.g. 250',
+                  errorText: errorText,
+                ),
+                onSubmitted: (_) {
+                  final parsed = int.tryParse(ctrl.text.trim());
+                  if (parsed == null || parsed < 1 || parsed > ChannelProvider.maxPointLimit) {
+                    setDialogState(() => errorText = 'Enter a value between 1 and ${ChannelProvider.maxPointLimit}');
+                  } else {
+                    Navigator.pop(ctx, parsed);
+                  }
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1553,29 +1765,44 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
 
           // Snapshot Cards Grid (Dynamic / Unlimited Fields)
           if (provider.latestValues.isNotEmpty) ...[
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: provider.latestValues.entries.map((entry) {
-                final fieldMeta = provider.fields.firstWhere(
-                  (f) => f.key == entry.key,
-                  orElse: () => ChannelField(
-                    id: 0,
-                    channelId: widget.channel.id,
-                    key: entry.key,
-                    valueType: 'string',
-                    firstSeenAt: DateTime.now(),
-                  ),
-                );
+            LayoutBuilder(
+              builder: (context, constraints) {
+                const double spacing = 10;
+                final maxW = constraints.maxWidth;
+                final int cols = maxW >= 780
+                    ? 4
+                    : maxW >= 540
+                        ? 3
+                        : 2;
+                final cardWidth = (maxW - spacing * (cols - 1)) / cols;
+                return Wrap(
+                  spacing: spacing,
+                  runSpacing: spacing,
+                  children: provider.latestValues.entries.map((entry) {
+                    final fieldMeta = provider.fields.firstWhere(
+                      (f) => f.key == entry.key,
+                      orElse: () => ChannelField(
+                        id: 0,
+                        channelId: widget.channel.id,
+                        key: entry.key,
+                        valueType: 'string',
+                        firstSeenAt: DateTime.now(),
+                      ),
+                    );
 
-                return _MetricCard(
-                  keyName: fieldMeta.displayName,
-                  value: entry.value,
-                  unit: fieldMeta.unit,
+                    return SizedBox(
+                      width: cardWidth,
+                      child: _MetricCard(
+                        keyName: fieldMeta.displayName,
+                        value: entry.value,
+                        unit: fieldMeta.unit,
+                      ),
+                    );
+                  }).toList(),
                 );
-              }).toList(),
+              },
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
           ],
 
           // Error / Loading / Multi-Type Dynamic Widget Cards for each numeric field
@@ -1583,23 +1810,51 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
             AppSurfaceCard(
               borderColor: colors.danger.withValues(alpha: 0.45),
               padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Icon(Icons.error_outline_rounded, color: colors.danger),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Could not load historical telemetry: ${provider.telemetryError}',
-                      style: TextStyle(color: colors.danger, fontSize: 13),
+              child: context.isCompactPhone
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(Icons.error_outline_rounded, color: colors.danger),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Could not load historical telemetry: ${provider.telemetryError}',
+                                style: TextStyle(color: colors.danger, fontSize: 13),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: OutlinedButton.icon(
+                            onPressed: () => provider.loadHistoricalData(widget.channel.id),
+                            icon: const Icon(Icons.refresh_rounded, size: 16),
+                            label: const Text('Retry'),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Icon(Icons.error_outline_rounded, color: colors.danger),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Could not load historical telemetry: ${provider.telemetryError}',
+                            style: TextStyle(color: colors.danger, fontSize: 13),
+                          ),
+                        ),
+                        TextButton.icon(
+                          onPressed: () => provider.loadHistoricalData(widget.channel.id),
+                          icon: const Icon(Icons.refresh_rounded, size: 16),
+                          label: const Text('Retry'),
+                        ),
+                      ],
                     ),
-                  ),
-                  TextButton.icon(
-                    onPressed: () => provider.loadHistoricalData(widget.channel.id),
-                    icon: const Icon(Icons.refresh_rounded, size: 16),
-                    label: const Text('Retry'),
-                  ),
-                ],
-              ),
             ),
             const SizedBox(height: 16),
           ],
@@ -1734,7 +1989,7 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
             children: [
               Icon(Icons.show_chart, size: 18, color: colors.primary),
               const SizedBox(width: 8),
-              const Text('Line Chart'),
+              const Expanded(child: Text('Line Chart', overflow: TextOverflow.ellipsis)),
             ],
           ),
         ),
@@ -1744,7 +1999,7 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
             children: [
               Icon(Icons.speed, size: 18, color: colors.accentCyan),
               const SizedBox(width: 8),
-              const Text('Radial Gauge'),
+              const Expanded(child: Text('Radial Gauge', overflow: TextOverflow.ellipsis)),
             ],
           ),
         ),
@@ -1754,7 +2009,7 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
             children: [
               Icon(Icons.pin_outlined, size: 18, color: colors.warning),
               const SizedBox(width: 8),
-              const Text('KPI Metric Card'),
+              const Expanded(child: Text('KPI Metric Card', overflow: TextOverflow.ellipsis)),
             ],
           ),
         ),
@@ -1764,7 +2019,7 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
             children: [
               Icon(Icons.radio_button_checked, size: 18, color: colors.success),
               const SizedBox(width: 8),
-              const Text('Status / LED Indicator'),
+              const Expanded(child: Text('Status / LED Indicator', overflow: TextOverflow.ellipsis)),
             ],
           ),
         ),
@@ -1776,9 +2031,10 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
     final config = AppConfig();
     final colors = context.appColors;
 
-    return Scaffold(
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+    return RefreshIndicator(
+      onRefresh: () => provider.loadDevices(widget.channel.id),
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
         children: [
           // Connection Info Banner
           Card(
@@ -1796,23 +2052,21 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
                     children: [
                       Icon(Icons.hub, size: 18, color: colors.warning),
                       const SizedBox(width: 8),
-                      const Text('MQTT Broker Connection Info', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      const Expanded(
+                        child: Text(
+                          'MQTT Broker Connection Info',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(child: _CopyableBadge(label: 'Host', value: config.mqttHost)),
-                      const SizedBox(width: 8),
-                      Expanded(child: _CopyableBadge(label: 'Port', value: '${config.mqttPort} (MQTTS 8883 / MQTT 1883)')),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(child: _CopyableBadge(label: 'Pub Topic', value: 'channels/${widget.channel.id}/data')),
-                      const SizedBox(width: 8),
-                      Expanded(child: _CopyableBadge(label: 'Sub Topic', value: 'channels/${widget.channel.id}/commands')),
+                  _ResponsiveBadgeGrid(
+                    badges: [
+                      _CopyableBadge(label: 'Host', value: config.mqttHost),
+                      _CopyableBadge(label: 'Port', value: '${config.mqttPort} (MQTTS 8883 / MQTT 1883)'),
+                      _CopyableBadge(label: 'Pub Topic', value: 'channels/${widget.channel.id}/data'),
+                      _CopyableBadge(label: 'Sub Topic', value: 'channels/${widget.channel.id}/commands'),
                     ],
                   ),
                 ],
@@ -1896,11 +2150,6 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
                 )),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAddDeviceDialog,
-        icon: const Icon(Icons.add),
-        label: const Text('Add Device'),
-      ),
     );
   }
 
@@ -1908,9 +2157,10 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
     final config = AppConfig();
     final colors = context.appColors;
 
-    return Scaffold(
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+    return RefreshIndicator(
+      onRefresh: () => provider.loadApiKeys(widget.channel.id),
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
         children: [
           // Connection Info Banner
           Card(
@@ -1928,23 +2178,21 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
                     children: [
                       Icon(Icons.http, size: 20, color: colors.accentCyan),
                       const SizedBox(width: 8),
-                      const Text('HTTP REST API Connection Info', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      const Expanded(
+                        child: Text(
+                          'HTTP REST API Connection Info',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(child: _CopyableBadge(label: 'API Base URL', value: config.apiUrl)),
-                      const SizedBox(width: 8),
-                      Expanded(child: _CopyableBadge(label: 'Channel ID', value: widget.channel.id.toString())),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(child: _CopyableBadge(label: 'Auth Header', value: 'X-API-Key: <key>')),
-                      const SizedBox(width: 8),
-                      Expanded(child: _CopyableBadge(label: 'Data Route', value: '/channels/${widget.channel.id}/data')),
+                  _ResponsiveBadgeGrid(
+                    badges: [
+                      _CopyableBadge(label: 'API Base URL', value: config.apiUrl),
+                      _CopyableBadge(label: 'Channel ID', value: widget.channel.id.toString()),
+                      _CopyableBadge(label: 'Auth Header', value: 'X-API-Key: <key>'),
+                      _CopyableBadge(label: 'Data Route', value: '/channels/${widget.channel.id}/data'),
                     ],
                   ),
                 ],
@@ -2007,11 +2255,6 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
                 )),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showCreateApiKeyDialog,
-        icon: const Icon(Icons.add),
-        label: const Text('New Key'),
-      ),
     );
   }
 }
@@ -2063,7 +2306,6 @@ class _MetricCard extends StatelessWidget {
     final valStr = value is double ? value.toStringAsFixed(2) : value.toString();
 
     return Container(
-      width: 156,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: colors.surfaceCard,
@@ -2141,6 +2383,10 @@ class _TimeSeriesChartCard extends StatelessWidget {
     final double minVal = points.map((p) => p.value).reduce((a, b) => a < b ? a : b);
     final double maxVal = points.map((p) => p.value).reduce((a, b) => a > b ? a : b);
     final double latestVal = points.last.value;
+    final span = points.last.time.difference(points.first.time);
+    final timeFormat = span.inHours >= 24 ? DateFormat('M/d HH:mm') : DateFormat('HH:mm');
+    final int lastIdx = points.length - 1;
+    final int midIdx = lastIdx ~/ 2;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -2149,31 +2395,35 @@ class _TimeSeriesChartCard extends StatelessWidget {
         side: BorderSide(color: colors.border),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: EdgeInsets.all(context.isCompactPhone ? 14 : 18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
-                  child: Text(
-                    fieldLabel + (unit != null ? ' ($unit)' : ''),
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: colors.textPrimary,
-                    ),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        fieldLabel + (unit != null ? ' ($unit)' : ''),
+                        style: TextStyle(
+                          fontSize: 15.5,
+                          fontWeight: FontWeight.w700,
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                      AppStatusPill(
+                        label: 'Now ${latestVal.toStringAsFixed(2)}${unit != null ? " $unit" : ""}',
+                        color: colors.primary,
+                      ),
+                    ],
                   ),
                 ),
-                AppStatusPill(
-                  label: 'Now ${latestVal.toStringAsFixed(2)}${unit != null ? " $unit" : ""}',
-                  color: colors.primary,
-                ),
-                if (menuButton != null) ...[
-                  const SizedBox(width: 6),
-                  menuButton!,
-                ],
+                ?menuButton,
               ],
             ),
             const SizedBox(height: 6),
@@ -2181,9 +2431,9 @@ class _TimeSeriesChartCard extends StatelessWidget {
               'Min: ${minVal.toStringAsFixed(2)}  •  Max: ${maxVal.toStringAsFixed(2)}  •  Samples: ${points.length}',
               style: TextStyle(fontSize: 11.5, color: colors.textSecondary),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
             SizedBox(
-              height: 190,
+              height: context.isCompactPhone ? 185 : 195,
               child: LineChart(
                 LineChartData(
                   gridData: FlGridData(
@@ -2197,7 +2447,30 @@ class _TimeSeriesChartCard extends StatelessWidget {
                   titlesData: FlTitlesData(
                     rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                     topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    bottomTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: points.length >= 2,
+                        reservedSize: 22,
+                        interval: 1,
+                        getTitlesWidget: (val, meta) {
+                          final idx = val.round();
+                          if (val != idx.toDouble()) return const SizedBox.shrink();
+                          final showTick = idx == 0 ||
+                              idx == lastIdx ||
+                              (points.length >= 4 && idx == midIdx);
+                          if (!showTick || idx < 0 || idx >= points.length) {
+                            return const SizedBox.shrink();
+                          }
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                              timeFormat.format(points[idx].time.toLocal()),
+                              style: TextStyle(fontSize: 10, color: colors.textTertiary),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
                     leftTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
@@ -2216,19 +2489,32 @@ class _TimeSeriesChartCard extends StatelessWidget {
                   borderData: FlBorderData(show: false),
                   lineTouchData: LineTouchData(
                     touchTooltipData: LineTouchTooltipData(
+                      fitInsideHorizontally: true,
+                      fitInsideVertically: true,
                       getTooltipColor: (_) => colors.surfaceElevated,
-                      getTooltipItems: (touchedSpots) => touchedSpots
-                          .map(
-                            (spot) => LineTooltipItem(
-                              spot.y.toStringAsFixed(2),
-                              TextStyle(
-                                color: colors.textPrimary,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 12,
+                      getTooltipItems: (touchedSpots) => touchedSpots.map((spot) {
+                        final idx = spot.x.round().clamp(0, points.length - 1);
+                        final ts = DateFormat('MMM d, HH:mm:ss')
+                            .format(points[idx].time.toLocal());
+                        return LineTooltipItem(
+                          '${spot.y.toStringAsFixed(2)}${unit != null ? " $unit" : ""}\n',
+                          TextStyle(
+                            color: colors.textPrimary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                          children: [
+                            TextSpan(
+                              text: ts,
+                              style: TextStyle(
+                                color: colors.textSecondary,
+                                fontWeight: FontWeight.w500,
+                                fontSize: 10,
                               ),
                             ),
-                          )
-                          .toList(),
+                          ],
+                        );
+                      }).toList(),
                     ),
                   ),
                   lineBarsData: [
@@ -2572,20 +2858,37 @@ class _KpiMetricCard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Container(
+              width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 color: colors.surfaceElevated,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: colors.border),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _StatItem(label: 'Min', value: minVal.toStringAsFixed(2), color: colors.primary),
-                  _StatItem(label: 'Average', value: avgVal.toStringAsFixed(2), color: colors.accentCyan),
-                  _StatItem(label: 'Max', value: maxVal.toStringAsFixed(2), color: colors.warning),
-                  _StatItem(label: 'Samples', value: points.length.toString(), color: colors.textPrimary),
-                ],
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final compactStats = constraints.maxWidth < 340;
+                  final stats = [
+                    _StatItem(label: 'Min', value: minVal.toStringAsFixed(2), color: colors.primary),
+                    _StatItem(label: 'Average', value: avgVal.toStringAsFixed(2), color: colors.accentCyan),
+                    _StatItem(label: 'Max', value: maxVal.toStringAsFixed(2), color: colors.warning),
+                    _StatItem(label: 'Samples', value: points.length.toString(), color: colors.textPrimary),
+                  ];
+                  if (compactStats) {
+                    final itemWidth = (constraints.maxWidth - 12) / 2;
+                    return Wrap(
+                      spacing: 12,
+                      runSpacing: 10,
+                      children: stats
+                          .map((stat) => SizedBox(width: itemWidth, child: stat))
+                          .toList(),
+                    );
+                  }
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: stats,
+                  );
+                },
               ),
             ),
           ],
@@ -2838,6 +3141,39 @@ class _CopyableBadge extends StatelessWidget {
   }
 }
 
+class _ResponsiveBadgeGrid extends StatelessWidget {
+  final List<Widget> badges;
+
+  const _ResponsiveBadgeGrid({required this.badges});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 520) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (int i = 0; i < badges.length; i++) ...[
+                if (i > 0) const SizedBox(height: 8),
+                badges[i],
+              ],
+            ],
+          );
+        }
+        return Row(
+          children: [
+            for (int i = 0; i < badges.length; i++) ...[
+              if (i > 0) const SizedBox(width: 8),
+              Expanded(child: badges[i]),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
 class _DeviceItemCard extends StatefulWidget {
   final Device device;
   final int channelId;
@@ -2884,6 +3220,19 @@ class _DeviceItemCardState extends State<_DeviceItemCard> {
 
     final hasPassword = dev.mqttPassword != null && dev.mqttPassword!.isNotEmpty;
 
+    final scopeBadge = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: scopeColor.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: scopeColor.withValues(alpha: 0.45)),
+      ),
+      child: Text(
+        scopeLabel,
+        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: scopeColor),
+      ),
+    );
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
@@ -2892,164 +3241,236 @@ class _DeviceItemCardState extends State<_DeviceItemCard> {
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 460;
+
+            final userRow = Row(
               children: [
-                CircleAvatar(
-                  backgroundColor: dev.isActive
-                      ? colors.accentCyan.withValues(alpha: 0.14)
-                      : colors.surfaceElevated,
-                  child: Icon(
-                    Icons.memory,
-                    color: dev.isActive ? colors.accentCyan : colors.textTertiary,
-                  ),
-                ),
-                const SizedBox(width: 12),
+                Text('User: ', style: TextStyle(fontSize: 12, color: colors.textSecondary)),
                 Expanded(
-                  child: Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          dev.name,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                            color: colors.textPrimary,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: scopeColor.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: scopeColor.withValues(alpha: 0.45)),
-                        ),
-                        child: Text(
-                          scopeLabel,
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: scopeColor),
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    dev.mqttUsername,
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: colors.textPrimary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                Switch(
-                  value: dev.isActive,
-                  activeThumbColor: colors.success,
-                  onChanged: widget.onToggleActive,
-                ),
                 IconButton(
-                  icon: Icon(Icons.vpn_key_outlined, size: 20, color: colors.warning),
-                  tooltip: 'View Credentials',
-                  onPressed: widget.onViewCredentials,
-                ),
-                IconButton(
-                  icon: const Icon(Icons.edit_outlined, size: 20),
-                  tooltip: 'Edit Access Scope',
-                  onPressed: widget.onEdit,
-                ),
-                IconButton(
-                  icon: Icon(Icons.delete_outline, color: colors.danger, size: 20),
-                  tooltip: 'Delete Device',
-                  onPressed: widget.onDelete,
+                  icon: Icon(Icons.copy_rounded, size: 17, color: colors.textSecondary),
+                  tooltip: 'Copy MQTT Username',
+                  visualDensity: VisualDensity.compact,
+                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: dev.mqttUsername));
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Copied MQTT Username')),
+                      );
+                    }
+                  },
                 ),
               ],
-            ),
-            const Divider(height: 16),
-            // Username and Password Row
-            Row(
+            );
+
+            final passRow = Row(
               children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      const Text('User: ', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      Flexible(
-                        child: Text(
-                          dev.mqttUsername,
-                          style: const TextStyle(fontFamily: 'monospace', fontSize: 12, fontWeight: FontWeight.bold),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                Text('Pass: ', style: TextStyle(fontSize: 12, color: colors.textSecondary)),
+                if (hasPassword) ...[
+                  Expanded(
+                    child: Text(
+                      _showPassword ? dev.mqttPassword! : '••••••••••••',
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: colors.textPrimary,
                       ),
-                      InkWell(
-                        onTap: () {
-                          Clipboard.setData(ClipboardData(text: dev.mqttUsername));
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Copied MQTT Username')),
-                            );
-                          }
-                        },
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 4),
-                          child: Icon(Icons.copy, size: 14, color: Colors.grey),
-                        ),
-                      ),
-                    ],
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: Row(
-                    children: [
-                      const Text('Pass: ', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      if (hasPassword) ...[
-                        Flexible(
-                          child: Text(
-                            _showPassword ? dev.mqttPassword! : '••••••••••••',
-                            style: const TextStyle(fontFamily: 'monospace', fontSize: 12, fontWeight: FontWeight.bold),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        InkWell(
-                          onTap: () => setState(() => _showPassword = !_showPassword),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            child: Icon(_showPassword ? Icons.visibility_off : Icons.visibility, size: 16, color: Colors.grey),
-                          ),
-                        ),
-                        InkWell(
-                          onTap: () {
-                            Clipboard.setData(ClipboardData(text: dev.mqttPassword!));
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Copied MQTT Password')),
-                              );
-                            }
-                          },
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 4),
-                            child: Icon(Icons.copy, size: 14, color: Colors.grey),
-                          ),
-                        ),
-                      ] else ...[
-                        const Flexible(
-                          child: Text(
-                            'Not saved',
-                            style: TextStyle(fontSize: 11, color: Colors.grey, fontStyle: FontStyle.italic),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        InkWell(
-                          onTap: widget.onResetPassword,
-                          child: Text(
-                            'Reset',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: context.appColors.warning,
-                              fontWeight: FontWeight.bold,
+                  IconButton(
+                    icon: Icon(
+                      _showPassword ? Icons.visibility_off : Icons.visibility,
+                      size: 18,
+                      color: colors.textSecondary,
+                    ),
+                    tooltip: _showPassword ? 'Hide password' : 'Show password',
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    onPressed: () => setState(() => _showPassword = !_showPassword),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.copy_rounded, size: 17, color: colors.textSecondary),
+                    tooltip: 'Copy MQTT Password',
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: dev.mqttPassword!));
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Copied MQTT Password')),
+                        );
+                      }
+                    },
+                  ),
+                ] else ...[
+                  Expanded(
+                    child: Text(
+                      'Not saved',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colors.textSecondary,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: widget.onResetPassword,
+                    style: TextButton.styleFrom(
+                      foregroundColor: colors.warning,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      minimumSize: const Size(0, 34),
+                    ),
+                    child: const Text(
+                      'Reset',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ],
+            );
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: dev.isActive
+                          ? colors.accentCyan.withValues(alpha: 0.14)
+                          : colors.surfaceElevated,
+                      child: Icon(
+                        Icons.memory,
+                        color: dev.isActive ? colors.accentCyan : colors.textTertiary,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: compact
+                          ? Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  dev.name,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                    color: colors.textPrimary,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 4),
+                                scopeBadge,
+                              ],
+                            )
+                          : Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    dev.name,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                      color: colors.textPrimary,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                scopeBadge,
+                              ],
                             ),
-                          ),
+                    ),
+                    Switch(
+                      value: dev.isActive,
+                      activeThumbColor: colors.success,
+                      onChanged: widget.onToggleActive,
+                    ),
+                    if (!compact) ...[
+                      IconButton(
+                        icon: Icon(Icons.vpn_key_outlined, size: 20, color: colors.warning),
+                        tooltip: 'View Credentials',
+                        onPressed: widget.onViewCredentials,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.edit_outlined, size: 20),
+                        tooltip: 'Edit Access Scope',
+                        onPressed: widget.onEdit,
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.delete_outline, color: colors.danger, size: 20),
+                        tooltip: 'Delete Device',
+                        onPressed: widget.onDelete,
+                      ),
+                    ],
+                  ],
+                ),
+                const Divider(height: 16),
+                if (compact) ...[
+                  userRow,
+                  const SizedBox(height: 2),
+                  passRow,
+                  const Divider(height: 14),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: widget.onViewCredentials,
+                        icon: Icon(Icons.vpn_key_outlined, size: 16, color: colors.warning),
+                        label: const Text('Credentials'),
+                        style: OutlinedButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                         ),
-                      ],
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: widget.onEdit,
+                        icon: const Icon(Icons.edit_outlined, size: 16),
+                        label: const Text('Scope'),
+                        style: OutlinedButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        ),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: widget.onDelete,
+                        icon: Icon(Icons.delete_outline, size: 16, color: colors.danger),
+                        label: Text('Delete', style: TextStyle(color: colors.danger)),
+                        style: OutlinedButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          side: BorderSide(color: colors.danger.withValues(alpha: 0.4)),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        ),
+                      ),
                     ],
                   ),
-                ),
+                ] else
+                  Row(
+                    children: [
+                      Expanded(child: userRow),
+                      const SizedBox(width: 12),
+                      Expanded(child: passRow),
+                    ],
+                  ),
               ],
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
@@ -3138,24 +3559,37 @@ class _ApiKeyCardItemState extends State<_ApiKeyCardItem> {
             const Divider(height: 16),
             Row(
               children: [
-                const Text('Key: ', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                Text('Key: ', style: TextStyle(fontSize: 12, color: colors.textSecondary)),
                 if (hasFullKey) ...[
-                  Flexible(
+                  Expanded(
                     child: Text(
                       _showKey ? k.apiKey! : ('•' * 28),
-                      style: const TextStyle(fontFamily: 'monospace', fontSize: 12, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: colors.textPrimary,
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  InkWell(
-                    onTap: () => setState(() => _showKey = !_showKey),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      child: Icon(_showKey ? Icons.visibility_off : Icons.visibility, size: 16, color: Colors.grey),
+                  IconButton(
+                    icon: Icon(
+                      _showKey ? Icons.visibility_off : Icons.visibility,
+                      size: 18,
+                      color: colors.textSecondary,
                     ),
+                    tooltip: _showKey ? 'Hide API Key' : 'Show API Key',
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    onPressed: () => setState(() => _showKey = !_showKey),
                   ),
-                  InkWell(
-                    onTap: () {
+                  IconButton(
+                    icon: Icon(Icons.copy_rounded, size: 17, color: colors.textSecondary),
+                    tooltip: 'Copy API Key',
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    onPressed: () {
                       Clipboard.setData(ClipboardData(text: k.apiKey!));
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -3163,16 +3597,16 @@ class _ApiKeyCardItemState extends State<_ApiKeyCardItem> {
                         );
                       }
                     },
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 4),
-                      child: Icon(Icons.copy, size: 14, color: Colors.grey),
-                    ),
                   ),
                 ] else ...[
-                  Flexible(
+                  Expanded(
                     child: Text(
                       '${k.prefix}*** (Legacy key)',
-                      style: const TextStyle(fontFamily: 'monospace', fontSize: 12, color: Colors.grey),
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 12,
+                        color: colors.textSecondary,
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),

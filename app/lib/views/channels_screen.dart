@@ -47,86 +47,24 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
     bool isPublic = false;
     final formKey = GlobalKey<FormState>();
 
-    showDialog(
+    showResponsiveModal(
       context: context,
+      maxWidth: 440,
       builder: (ctx) {
         final colors = ctx.appColors;
         return StatefulBuilder(
           builder: (ctx, setStateDialog) {
-            return AlertDialog(
-              title: const Row(
-                children: [
-                  Icon(Icons.add_circle_outline_rounded, size: 22),
-                  SizedBox(width: 10),
-                  Text('Create Channel'),
-                ],
-              ),
-              content: SizedBox(
-                width: 400,
-                child: Form(
-                  key: formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextFormField(
-                        controller: nameController,
-                        autofocus: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Channel Name',
-                          hintText: 'e.g., Greenhouse Sensors',
-                          prefixIcon: Icon(Icons.sensors_rounded),
-                        ),
-                        validator: (v) => v == null || v.trim().isEmpty
-                            ? 'Channel name is required'
-                            : null,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: descController,
-                        maxLines: 2,
-                        decoration: const InputDecoration(
-                          labelText: 'Description (optional)',
-                          hintText: 'Hardware notes or location',
-                          prefixIcon: Icon(Icons.notes_rounded),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: colors.surfaceElevated,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: colors.border),
-                        ),
-                        child: SwitchListTile(
-                          title: const Text(
-                            'Public Telemetry Access',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          subtitle: Text(
-                            'Anyone with the share URL can view read-only graphs',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: colors.textSecondary,
-                            ),
-                          ),
-                          value: isPublic,
-                          activeThumbColor: colors.success,
-                          onChanged: (v) => setStateDialog(() => isPublic = v),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+            return ResponsiveModalScaffold(
+              title: 'Create Channel',
+              icon: Icons.add_circle_outline_rounded,
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
                   child: const Text('Cancel'),
                 ),
-                ElevatedButton(
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.check_rounded, size: 18),
+                  label: const Text('Create Channel'),
                   onPressed: () async {
                     if (!formKey.currentState!.validate()) return;
                     Navigator.pop(ctx);
@@ -138,9 +76,68 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                           isPublic,
                         );
                   },
-                  child: const Text('Create'),
                 ),
               ],
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: nameController,
+                      autofocus: true,
+                      textInputAction: TextInputAction.next,
+                      decoration: const InputDecoration(
+                        labelText: 'Channel Name',
+                        hintText: 'e.g., Greenhouse Sensors',
+                        prefixIcon: Icon(Icons.sensors_rounded),
+                      ),
+                      validator: (v) => v == null || v.trim().isEmpty
+                          ? 'Channel name is required'
+                          : null,
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: descController,
+                      maxLines: 2,
+                      textInputAction: TextInputAction.done,
+                      decoration: const InputDecoration(
+                        labelText: 'Description (optional)',
+                        hintText: 'Hardware notes or location',
+                        prefixIcon: Icon(Icons.notes_rounded),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Material(
+                      color: colors.surfaceElevated,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: colors.border),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: SwitchListTile(
+                        title: const Text(
+                          'Public Telemetry Access',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        subtitle: Text(
+                          'Anyone with the share URL can view read-only graphs',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: colors.textSecondary,
+                          ),
+                        ),
+                        value: isPublic,
+                        activeThumbColor: colors.success,
+                        onChanged: (v) => setStateDialog(() => isPublic = v),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             );
           },
         );
@@ -167,20 +164,13 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
       return;
     }
 
-    final confirm = await showDialog<bool>(
+    final confirm = await showResponsiveModal<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.public_rounded, color: colors.warning),
-            const SizedBox(width: 10),
-            const Text('Channel is Private'),
-          ],
-        ),
-        content: Text(
-          'Only you can view "${ch.name}" right now. Make it public so anyone with the link can view its live telemetry?',
-          style: TextStyle(color: colors.textSecondary, height: 1.4),
-        ),
+      maxWidth: 440,
+      builder: (ctx) => ResponsiveModalScaffold(
+        title: 'Channel is Private',
+        icon: Icons.public_rounded,
+        iconColor: colors.warning,
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -191,6 +181,10 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
             child: const Text('Make Public & Copy Link'),
           ),
         ],
+        child: Text(
+          'Only you can view "${ch.name}" right now. Make it public so anyone with the link can view its live telemetry?',
+          style: TextStyle(color: colors.textSecondary, height: 1.45),
+        ),
       ),
     );
 
@@ -230,77 +224,186 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
     final filteredChannels = _filterChannels(allChannels);
     final publicCount = allChannels.where((c) => c.isPublic).length;
     final privateCount = allChannels.length - publicCount;
+    final isPhone = context.isCompactPhone;
+    final isAdmin = auth.currentUser?.isAdmin == true;
 
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 16,
-        title: Row(
+        title: const Row(
           children: [
-            const AppBrandMark(size: 32),
-            const SizedBox(width: 10),
-            const Text('ThingLarp'),
+            AppBrandMark(size: 32),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'ThingLarp',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         actions: [
           const AppThemeToggleButton(),
-          const SizedBox(width: 6),
-          if (auth.currentUser?.isAdmin == true) ...[
-            Tooltip(
-              message: 'Admin Control Center',
-              child: IconButton(
-                icon: Icon(
-                  Icons.admin_panel_settings_rounded,
-                  color: colors.warning,
+          const SizedBox(width: 4),
+          if (isPhone)
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert_rounded),
+              tooltip: 'Workspace Menu',
+              onSelected: (val) {
+                if (val == 'admin') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AdminUsersScreen()),
+                  );
+                } else if (val == 'docs') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ApiTutorialScreen()),
+                  );
+                } else if (val == 'settings') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                  );
+                } else if (val == 'logout') {
+                  auth.logout();
+                }
+              },
+              itemBuilder: (ctx) => [
+                if (isAdmin)
+                  PopupMenuItem(
+                    value: 'admin',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.admin_panel_settings_rounded,
+                          size: 20,
+                          color: colors.warning,
+                        ),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Text(
+                            'Admin Control Center',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                PopupMenuItem(
+                  value: 'docs',
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.menu_book_rounded,
+                        size: 20,
+                        color: colors.accentCyan,
+                      ),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Text(
+                          'API & Firmware Docs',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+                const PopupMenuItem(
+                  value: 'settings',
+                  child: Row(
+                    children: [
+                      Icon(Icons.tune_rounded, size: 20),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Settings & Server',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'logout',
+                  child: Row(
+                    children: [
+                      Icon(Icons.logout_rounded, size: 20, color: colors.danger),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Sign Out',
+                          style: TextStyle(color: colors.danger),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            )
+          else ...[
+            if (isAdmin)
+              Tooltip(
+                message: 'Admin Control Center',
+                child: IconButton(
+                  icon: Icon(
+                    Icons.admin_panel_settings_rounded,
+                    color: colors.warning,
+                  ),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AdminUsersScreen()),
+                  ),
+                ),
+              ),
+            Tooltip(
+              message: 'API & Firmware Quickstart',
+              child: IconButton(
+                icon: Icon(Icons.menu_book_rounded, color: colors.accentCyan),
                 onPressed: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const AdminUsersScreen()),
+                  MaterialPageRoute(builder: (_) => const ApiTutorialScreen()),
                 ),
               ),
             ),
+            Tooltip(
+              message: 'Settings',
+              child: IconButton(
+                icon: const Icon(Icons.tune_rounded),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                ),
+              ),
+            ),
+            Tooltip(
+              message: 'Sign Out',
+              child: IconButton(
+                icon: Icon(Icons.logout_rounded, color: colors.textSecondary),
+                onPressed: () => auth.logout(),
+              ),
+            ),
+            const SizedBox(width: 8),
           ],
-          Tooltip(
-            message: 'API & Firmware Quickstart',
-            child: IconButton(
-              icon: Icon(Icons.menu_book_rounded, color: colors.accentCyan),
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ApiTutorialScreen()),
-              ),
-            ),
-          ),
-          Tooltip(
-            message: 'Settings',
-            child: IconButton(
-              icon: const Icon(Icons.tune_rounded),
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
-              ),
-            ),
-          ),
-          Tooltip(
-            message: 'Sign Out',
-            child: IconButton(
-              icon: Icon(Icons.logout_rounded, color: colors.textSecondary),
-              onPressed: () => auth.logout(),
-            ),
-          ),
-          const SizedBox(width: 8),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () => channelProvider.loadChannels(),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isWide = constraints.maxWidth >= 760;
-            final contentPadding = isWide
-                ? const EdgeInsets.fromLTRB(28, 18, 28, 96)
-                : const EdgeInsets.fromLTRB(16, 12, 16, 96);
+      body: SafeArea(
+        top: false,
+        child: RefreshIndicator(
+          onRefresh: () => channelProvider.loadChannels(),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth >= 760;
+              final contentPadding = isWide
+                  ? const EdgeInsets.fromLTRB(28, 18, 28, 96)
+                  : const EdgeInsets.fromLTRB(16, 12, 16, 96);
 
-            return SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: contentPadding,
+              return SingleChildScrollView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: contentPadding,
               child: ResponsiveCenter(
                 maxWidth: 1180,
                 child: Column(
@@ -348,6 +451,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
           },
         ),
       ),
+    ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showCreateDialog,
         icon: const Icon(Icons.add_rounded),
@@ -366,8 +470,64 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
     required bool isWide,
   }) {
     final colors = context.appColors;
+    final statChips = [
+      _HeaderStatChip(
+        label: '$totalCount Total',
+        icon: Icons.sensors_rounded,
+        color: colors.primary,
+        expanded: !isWide,
+      ),
+      _HeaderStatChip(
+        label: '$publicCount Public',
+        icon: Icons.public_rounded,
+        color: colors.success,
+        expanded: !isWide,
+      ),
+      _HeaderStatChip(
+        label: '$privateCount Private',
+        icon: Icons.lock_outline_rounded,
+        color: colors.textSecondary,
+        expanded: !isWide,
+      ),
+    ];
+
+    final titleColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text(
+              'Telemetry Channels',
+              style: TextStyle(
+                fontSize: isWide ? 24 : 20,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
+                color: colors.textPrimary,
+              ),
+            ),
+            if (isAdmin)
+              AppStatusPill(
+                label: 'Admin',
+                color: colors.warning,
+                icon: Icons.verified_user_outlined,
+              ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Signed in as $username • Live telemetry & control',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontSize: 13, color: colors.textSecondary),
+        ),
+      ],
+    );
+
     return Container(
-      padding: EdgeInsets.all(isWide ? 24 : 18),
+      padding: EdgeInsets.all(isWide ? 24 : 16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [colors.heroStart, colors.heroEnd],
@@ -377,76 +537,46 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: colors.border),
       ),
-      child: Wrap(
-        spacing: 18,
-        runSpacing: 16,
-        alignment: WrapAlignment.spaceBetween,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Telemetry Channels',
-                    style: TextStyle(
-                      fontSize: isWide ? 24 : 20,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.5,
-                      color: colors.textPrimary,
-                    ),
-                  ),
-                  if (isAdmin) ...[
-                    const SizedBox(width: 10),
-                    AppStatusPill(
-                      label: 'Admin',
-                      color: colors.warning,
-                      icon: Icons.verified_user_outlined,
-                    ),
+      child: isWide
+          ? Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(child: titleColumn),
+                const SizedBox(width: 18),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 8,
+                  children: statChips,
+                ),
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                titleColumn,
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(child: statChips[0]),
+                    const SizedBox(width: 8),
+                    Expanded(child: statChips[1]),
+                    const SizedBox(width: 8),
+                    Expanded(child: statChips[2]),
                   ],
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Signed in as $username • Real-time MQTT notification + API telemetry',
-                style: TextStyle(fontSize: 13.5, color: colors.textSecondary),
-              ),
-            ],
-          ),
-          Wrap(
-            spacing: 10,
-            runSpacing: 8,
-            children: [
-              _HeaderStatChip(
-                label: '$totalCount Total',
-                icon: Icons.sensors_rounded,
-                color: colors.primary,
-              ),
-              _HeaderStatChip(
-                label: '$publicCount Public',
-                icon: Icons.public_rounded,
-                color: colors.success,
-              ),
-              _HeaderStatChip(
-                label: '$privateCount Private',
-                icon: Icons.lock_outline_rounded,
-                color: colors.textSecondary,
-              ),
-            ],
-          ),
-        ],
-      ),
+                ),
+              ],
+            ),
     );
   }
 
   Widget _buildFilterBar(AppColors colors, bool isWide) {
     final searchField = TextField(
       controller: _searchController,
+      textInputAction: TextInputAction.search,
       onChanged: (v) => setState(() => _searchQuery = v.trim()),
       decoration: InputDecoration(
-        hintText: 'Search channels by name, description, or #ID...',
+        hintText: 'Search channels or #ID...',
         prefixIcon: const Icon(Icons.search_rounded, size: 20),
         suffixIcon: _searchQuery.isNotEmpty
             ? IconButton(
@@ -461,6 +591,16 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
       ),
     );
 
+    Widget buildPill(String label, String value) {
+      final pill = _FilterPill(
+        label: label,
+        selected: _visibilityFilter == value,
+        expanded: !isWide,
+        onTap: () => setState(() => _visibilityFilter = value),
+      );
+      return isWide ? pill : Expanded(child: pill);
+    }
+
     final filterPills = Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
@@ -469,23 +609,11 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
         border: Border.all(color: colors.border),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: isWide ? MainAxisSize.min : MainAxisSize.max,
         children: [
-          _FilterPill(
-            label: 'All',
-            selected: _visibilityFilter == 'all',
-            onTap: () => setState(() => _visibilityFilter = 'all'),
-          ),
-          _FilterPill(
-            label: 'Public',
-            selected: _visibilityFilter == 'public',
-            onTap: () => setState(() => _visibilityFilter = 'public'),
-          ),
-          _FilterPill(
-            label: 'Private',
-            selected: _visibilityFilter == 'private',
-            onTap: () => setState(() => _visibilityFilter = 'private'),
-          ),
+          buildPill('All', 'all'),
+          buildPill('Public', 'public'),
+          buildPill('Private', 'private'),
         ],
       ),
     );
@@ -505,7 +633,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
       children: [
         searchField,
         const SizedBox(height: 10),
-        Align(alignment: Alignment.centerLeft, child: filterPills),
+        filterPills,
       ],
     );
   }
@@ -652,17 +780,18 @@ class _ChannelCard extends StatelessWidget {
                 message: 'Copy Share Link',
                 child: InkWell(
                   onTap: onShare,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(10),
                   child: Container(
-                    padding: const EdgeInsets.all(6),
+                    constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: colors.surfaceElevated,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: colors.border),
                     ),
                     child: Icon(
                       Icons.share_outlined,
-                      size: 16,
+                      size: 18,
                       color: colors.accentCyan,
                     ),
                   ),
@@ -772,34 +901,44 @@ class _HeaderStatChip extends StatelessWidget {
   final String label;
   final IconData icon;
   final Color color;
+  final bool expanded;
 
   const _HeaderStatChip({
     required this.label,
     required this.icon,
     required this.color,
+    this.expanded = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: EdgeInsets.symmetric(
+        horizontal: expanded ? 8 : 12,
+        vertical: 8,
+      ),
       decoration: BoxDecoration(
         color: colors.surfaceCard,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: colors.border),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: expanded ? MainAxisSize.max : MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(icon, size: 15, color: color),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w600,
-              color: colors.textPrimary,
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: colors.textPrimary,
+              ),
             ),
           ),
         ],
@@ -812,11 +951,13 @@ class _FilterPill extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
+  final bool expanded;
 
   const _FilterPill({
     required this.label,
     required this.selected,
     required this.onTap,
+    this.expanded = false,
   });
 
   @override
@@ -827,13 +968,18 @@ class _FilterPill extends StatelessWidget {
       borderRadius: BorderRadius.circular(8),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        padding: EdgeInsets.symmetric(
+          horizontal: expanded ? 8 : 12,
+          vertical: expanded ? 9 : 7,
+        ),
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           color: selected ? colors.primary : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Text(
           label,
+          textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 12.5,
             fontWeight: FontWeight.w600,

@@ -222,3 +222,162 @@ class ResponsiveCenter extends StatelessWidget {
     );
   }
 }
+
+/// Viewport breakpoint helpers for tuning layouts on phones vs desktop/web.
+extension ResponsiveContext on BuildContext {
+  double get screenWidth => MediaQuery.sizeOf(this).width;
+  bool get isCompactPhone => screenWidth < 600;
+  bool get isNarrowPhone => screenWidth < 400;
+}
+
+/// Opens a scrollable bottom sheet on phones (<600dp) or a centered dialog on wider screens.
+Future<T?> showResponsiveModal<T>({
+  required BuildContext context,
+  required WidgetBuilder builder,
+  double maxWidth = 520,
+}) {
+  if (context.isCompactPhone) {
+    return showModalBottomSheet<T>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: builder,
+    );
+  }
+  return showDialog<T>(
+    context: context,
+    builder: (ctx) => Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: maxWidth,
+          maxHeight: MediaQuery.sizeOf(ctx).height * 0.88,
+        ),
+        child: builder(ctx),
+      ),
+    ),
+  );
+}
+
+/// Shared modal shell used inside [showResponsiveModal] for both bottom sheets and dialogs.
+class ResponsiveModalScaffold extends StatelessWidget {
+  final String title;
+  final IconData? icon;
+  final Color? iconColor;
+  final Widget child;
+  final List<Widget> actions;
+
+  const ResponsiveModalScaffold({
+    super.key,
+    required this.title,
+    this.icon,
+    this.iconColor,
+    required this.child,
+    this.actions = const [],
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final isPhone = context.isCompactPhone;
+    final viewInsets = MediaQuery.viewInsetsOf(context).bottom;
+    final maxSheetHeight = MediaQuery.sizeOf(context).height * 0.90;
+
+    final borderRadius = isPhone
+        ? const BorderRadius.vertical(top: Radius.circular(24))
+        : BorderRadius.circular(20);
+
+    return AnimatedPadding(
+      duration: const Duration(milliseconds: 150),
+      curve: Curves.easeOut,
+      padding: EdgeInsets.only(bottom: isPhone ? viewInsets : 0),
+      child: Container(
+        constraints: BoxConstraints(maxHeight: maxSheetHeight),
+        decoration: BoxDecoration(
+          color: colors.surfaceCard,
+          borderRadius: borderRadius,
+          border: Border.all(color: colors.border),
+          boxShadow: [
+            BoxShadow(
+              color: colors.shadow,
+              blurRadius: 24,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (isPhone)
+                Center(
+                  child: Container(
+                    width: 38,
+                    height: 4,
+                    margin: const EdgeInsets.only(top: 10, bottom: 2),
+                    decoration: BoxDecoration(
+                      color: colors.borderStrong,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(20, isPhone ? 10 : 18, 12, 12),
+                child: Row(
+                  children: [
+                    if (icon != null) ...[
+                      Icon(icon, color: iconColor ?? colors.primary, size: 22),
+                      const SizedBox(width: 10),
+                    ],
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 17.5,
+                          fontWeight: FontWeight.w700,
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, size: 20),
+                      tooltip: 'Close',
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+              ),
+              Divider(height: 1, color: colors.border),
+              Flexible(
+                child: SingleChildScrollView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                  child: child,
+                ),
+              ),
+              if (actions.isNotEmpty) ...[
+                Divider(height: 1, color: colors.border),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
+                  child: Wrap(
+                    spacing: 10,
+                    runSpacing: 8,
+                    alignment: WrapAlignment.end,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: actions,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

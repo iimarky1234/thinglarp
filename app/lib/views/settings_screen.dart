@@ -55,12 +55,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  void _resetDefaults() {
+  void _applyPreset({
+    required String apiUrl,
+    required String mqttHost,
+    required int mqttPort,
+  }) {
     setState(() {
-      _apiController.text = AppConfig.defaultApiUrl;
-      _mqttHostController.text = AppConfig.defaultMqttHost;
-      _mqttPortController.text = AppConfig.defaultMqttPort.toString();
+      _apiController.text = apiUrl;
+      _mqttHostController.text = mqttHost;
+      _mqttPortController.text = mqttPort.toString();
     });
+  }
+
+  void _resetDefaults() {
+    _applyPreset(
+      apiUrl: AppConfig.recommendedApiUrl,
+      mqttHost: AppConfig.recommendedMqttHost,
+      mqttPort: AppConfig.recommendedMqttPort,
+    );
   }
 
   @override
@@ -69,6 +81,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final themeProvider = ThemeProvider.maybeOf(context);
     final currentMode = themeProvider?.themeMode ?? ThemeMode.system;
     final resolvedBrightness = Theme.of(context).brightness;
+    final isPhone = context.isCompactPhone;
 
     return Scaffold(
       appBar: AppBar(
@@ -80,17 +93,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: ResponsiveCenter(
-          maxWidth: 680,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              AppSurfaceCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+      body: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: EdgeInsets.fromLTRB(
+            isPhone ? 16 : 20,
+            16,
+            isPhone ? 16 : 20,
+            28,
+          ),
+          child: ResponsiveCenter(
+            maxWidth: 680,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AppSurfaceCard(
+                  padding: EdgeInsets.all(isPhone ? 16 : 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                     Row(
                       children: [
                         Container(
@@ -187,6 +209,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 16),
               AppSurfaceCard(
+                padding: EdgeInsets.all(isPhone ? 16 : 20),
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -236,9 +259,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 14),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          ActionChip(
+                            avatar: Icon(
+                              Icons.cloud_outlined,
+                              size: 16,
+                              color: colors.primary,
+                            ),
+                            label: const Text('ThingLarp Cloud'),
+                            onPressed: () => _applyPreset(
+                              apiUrl: AppConfig.cloudApiUrl,
+                              mqttHost: AppConfig.cloudMqttHost,
+                              mqttPort: AppConfig.cloudMqttPort,
+                            ),
+                          ),
+                          ActionChip(
+                            avatar: Icon(
+                              Icons.computer_rounded,
+                              size: 16,
+                              color: colors.textSecondary,
+                            ),
+                            label: const Text('Localhost Dev'),
+                            onPressed: () => _applyPreset(
+                              apiUrl: AppConfig.defaultApiUrl,
+                              mqttHost: AppConfig.defaultMqttHost,
+                              mqttPort: AppConfig.defaultMqttPort,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
                       TextFormField(
                         controller: _apiController,
+                        keyboardType: TextInputType.url,
+                        textInputAction: TextInputAction.next,
                         decoration: const InputDecoration(
                           labelText: 'REST API Base URL',
                           hintText: 'https://api.iimarky123.io.vn',
@@ -255,48 +313,83 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         },
                       ),
                       const SizedBox(height: 14),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            flex: 2,
-                            child: TextFormField(
-                              controller: _mqttHostController,
-                              decoration: const InputDecoration(
-                                labelText: 'MQTT Broker Host',
-                                hintText: 'mqtt.iimarky123.io.vn',
-                                prefixIcon: Icon(Icons.router_outlined),
-                              ),
-                              validator: (v) =>
-                                  (v == null || v.trim().isEmpty)
-                                      ? 'Host required'
-                                      : null,
-                            ),
+                      if (isPhone) ...[
+                        TextFormField(
+                          controller: _mqttHostController,
+                          keyboardType: TextInputType.url,
+                          textInputAction: TextInputAction.next,
+                          decoration: const InputDecoration(
+                            labelText: 'MQTT Broker Host',
+                            hintText: 'mqtt.iimarky123.io.vn',
+                            prefixIcon: Icon(Icons.router_outlined),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextFormField(
-                              controller: _mqttPortController,
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                labelText: 'Port',
-                                hintText: '8883',
-                                prefixIcon: Icon(Icons.numbers_rounded),
-                              ),
-                              validator: (v) {
-                                final port = int.tryParse((v ?? '').trim());
-                                if (port == null || port < 1 || port > 65535) {
-                                  return 'Invalid';
-                                }
-                                return null;
-                              },
-                            ),
+                          validator: (v) =>
+                              (v == null || v.trim().isEmpty)
+                                  ? 'Host required'
+                                  : null,
+                        ),
+                        const SizedBox(height: 14),
+                        TextFormField(
+                          controller: _mqttPortController,
+                          keyboardType: TextInputType.number,
+                          textInputAction: TextInputAction.done,
+                          decoration: const InputDecoration(
+                            labelText: 'MQTT Port (8883 TLS / 1883)',
+                            hintText: '8883',
+                            prefixIcon: Icon(Icons.numbers_rounded),
                           ),
-                        ],
-                      ),
+                          validator: (v) {
+                            final port = int.tryParse((v ?? '').trim());
+                            if (port == null || port < 1 || port > 65535) {
+                              return 'Enter valid port (1–65535)';
+                            }
+                            return null;
+                          },
+                        ),
+                      ] else
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: TextFormField(
+                                controller: _mqttHostController,
+                                keyboardType: TextInputType.url,
+                                decoration: const InputDecoration(
+                                  labelText: 'MQTT Broker Host',
+                                  hintText: 'mqtt.iimarky123.io.vn',
+                                  prefixIcon: Icon(Icons.router_outlined),
+                                ),
+                                validator: (v) =>
+                                    (v == null || v.trim().isEmpty)
+                                        ? 'Host required'
+                                        : null,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _mqttPortController,
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(
+                                  labelText: 'Port',
+                                  hintText: '8883',
+                                  prefixIcon: Icon(Icons.numbers_rounded),
+                                ),
+                                validator: (v) {
+                                  final port = int.tryParse((v ?? '').trim());
+                                  if (port == null || port < 1 || port > 65535) {
+                                    return 'Invalid';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
                       const SizedBox(height: 20),
                       SizedBox(
-                        height: 46,
+                        height: 48,
                         child: ElevatedButton.icon(
                           onPressed: _saving ? null : _saveSettings,
                           icon: const Icon(Icons.save_rounded, size: 18),
@@ -311,6 +404,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 }

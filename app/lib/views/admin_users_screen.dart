@@ -102,71 +102,12 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     final passwordCtrl = TextEditingController();
     bool isAdmin = false;
 
-    showDialog(
+    showResponsiveModal(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setStateDlg) => AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.person_add_outlined, size: 22),
-              SizedBox(width: 10),
-              Text('Create User Account'),
-            ],
-          ),
-          content: SizedBox(
-            width: 390,
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: usernameCtrl,
-                    autofocus: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Username',
-                      prefixIcon: Icon(Icons.person_outline_rounded),
-                    ),
-                    validator: (v) => (v == null || v.trim().length < 3)
-                        ? 'At least 3 characters'
-                        : null,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: passwordCtrl,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Initial Password',
-                      prefixIcon: Icon(Icons.lock_outline_rounded),
-                    ),
-                    validator: (v) =>
-                        (v == null || v.length < 6) ? 'At least 6 characters' : null,
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: ctx.appColors.surfaceElevated,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: ctx.appColors.border),
-                    ),
-                    child: SwitchListTile(
-                      title: const Text(
-                        'Administrator Privileges',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                      ),
-                      subtitle: const Text(
-                        'Full access to user and system settings',
-                        style: TextStyle(fontSize: 12),
-                      ),
-                      value: isAdmin,
-                      activeThumbColor: ctx.appColors.warning,
-                      onChanged: (v) => setStateDlg(() => isAdmin = v),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+        builder: (ctx, setStateDlg) => ResponsiveModalScaffold(
+          title: 'Create User Account',
+          icon: Icons.person_add_outlined,
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
@@ -204,6 +145,60 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
               child: const Text('Create User'),
             ),
           ],
+          child: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: usernameCtrl,
+                  autofocus: true,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    labelText: 'Username',
+                    prefixIcon: Icon(Icons.person_outline_rounded),
+                  ),
+                  validator: (v) => (v == null || v.trim().length < 3)
+                      ? 'At least 3 characters'
+                      : null,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: passwordCtrl,
+                  obscureText: true,
+                  textInputAction: TextInputAction.done,
+                  decoration: const InputDecoration(
+                    labelText: 'Initial Password',
+                    prefixIcon: Icon(Icons.lock_outline_rounded),
+                  ),
+                  validator: (v) =>
+                      (v == null || v.length < 6) ? 'At least 6 characters' : null,
+                ),
+                const SizedBox(height: 12),
+                Material(
+                  color: ctx.appColors.surfaceElevated,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: ctx.appColors.border),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: SwitchListTile(
+                    title: const Text(
+                      'Administrator Privileges',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: const Text(
+                      'Full access to user and system settings',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    value: isAdmin,
+                    activeThumbColor: ctx.appColors.warning,
+                    onChanged: (v) => setStateDlg(() => isAdmin = v),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -213,24 +208,11 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     final formKey = GlobalKey<FormState>();
     final pwdCtrl = TextEditingController();
 
-    showDialog(
+    showResponsiveModal(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Reset Password • ${user.username}'),
-        content: Form(
-          key: formKey,
-          child: TextFormField(
-            controller: pwdCtrl,
-            obscureText: true,
-            autofocus: true,
-            decoration: const InputDecoration(
-              labelText: 'New Password',
-              prefixIcon: Icon(Icons.lock_reset_rounded),
-            ),
-            validator: (v) =>
-                (v == null || v.length < 6) ? 'At least 6 characters' : null,
-          ),
-        ),
+      builder: (ctx) => ResponsiveModalScaffold(
+        title: 'Reset Password • ${user.username}',
+        icon: Icons.lock_reset_rounded,
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -263,6 +245,20 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
             child: const Text('Update Password'),
           ),
         ],
+        child: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: pwdCtrl,
+            obscureText: true,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'New Password',
+              prefixIcon: Icon(Icons.lock_reset_rounded),
+            ),
+            validator: (v) =>
+                (v == null || v.length < 6) ? 'At least 6 characters' : null,
+          ),
+        ),
       ),
     );
   }
@@ -301,13 +297,12 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
 
   Future<void> _confirmDelete(AdminUser user) async {
     final colors = context.appColors;
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showResponsiveModal<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete User'),
-        content: Text(
-          'Permanently delete user "${user.username}" along with their channels and devices?',
-        ),
+      builder: (ctx) => ResponsiveModalScaffold(
+        title: 'Delete User',
+        icon: Icons.warning_amber_rounded,
+        iconColor: colors.danger,
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -322,6 +317,9 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
             child: const Text('Delete User'),
           ),
         ],
+        child: Text(
+          'Permanently delete user "${user.username}" along with their channels and devices?',
+        ),
       ),
     );
 
@@ -380,14 +378,22 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _loadData,
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 96),
-                    child: ResponsiveCenter(
+          : SafeArea(
+              top: false,
+              child: RefreshIndicator(
+                onRefresh: _loadData,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                      padding: EdgeInsets.fromLTRB(
+                        context.isCompactPhone ? 12 : 20,
+                        16,
+                        context.isCompactPhone ? 12 : 20,
+                        96,
+                      ),
+                      child: ResponsiveCenter(
                       maxWidth: 1120,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -455,6 +461,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                 },
               ),
             ),
+          ),
     );
   }
 
@@ -702,7 +709,12 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                   children: [
                     Icon(Icons.lock_reset_rounded, size: 18),
                     SizedBox(width: 10),
-                    Text('Reset Password'),
+                    Expanded(
+                      child: Text(
+                        'Reset Password',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -718,7 +730,12 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                         size: 18,
                       ),
                       const SizedBox(width: 10),
-                      Text(user.isActive ? 'Deactivate Account' : 'Reactivate Account'),
+                      Expanded(
+                        child: Text(
+                          user.isActive ? 'Deactivate Account' : 'Reactivate Account',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -734,7 +751,12 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                         size: 18,
                       ),
                       const SizedBox(width: 10),
-                      Text(user.isAdmin ? 'Remove Admin' : 'Make Admin'),
+                      Expanded(
+                        child: Text(
+                          user.isAdmin ? 'Remove Admin' : 'Make Admin',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -745,7 +767,13 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                     children: [
                       Icon(Icons.delete_outline_rounded, size: 18, color: colors.danger),
                       const SizedBox(width: 10),
-                      Text('Delete User', style: TextStyle(color: colors.danger)),
+                      Expanded(
+                        child: Text(
+                          'Delete User',
+                          style: TextStyle(color: colors.danger),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
                   ),
                 ),
