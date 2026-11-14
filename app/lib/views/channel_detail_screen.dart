@@ -11,6 +11,8 @@ import '../models/telemetry.dart';
 import '../providers/channel_provider.dart';
 import '../services/mqtt_service.dart';
 import '../config.dart';
+import '../theme/app_theme.dart';
+import '../widgets/app_ui.dart';
 import 'api_tutorial_screen.dart';
 import 'login_screen.dart';
 
@@ -664,15 +666,20 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
                     Container(
                       height: 120,
                       width: double.infinity,
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.black26,
-                        borderRadius: BorderRadius.circular(8),
+                        color: context.appColors.codeBg,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: context.appColors.border),
                       ),
                       child: SingleChildScrollView(
                         child: SelectableText(
                           exportedData!,
-                          style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+                          style: TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 11,
+                            color: context.appColors.codeText,
+                          ),
                         ),
                       ),
                     ),
@@ -961,15 +968,19 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.black26,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+                    color: context.appColors.codeBg,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: context.appColors.border),
                   ),
                   child: SelectableText(
                     key.scope == 'write'
                         ? 'curl -X POST "${config.apiUrl}/channels/${widget.channel.id}/data" \\\n  -H "Content-Type: application/json" \\\n  -H "X-API-Key: $fullKey" \\\n  -d \'{"temp": 24.5, "humidity": 60}\''
                         : 'curl -X GET "${config.apiUrl}/channels/${widget.channel.id}/data?resolution=auto" \\\n  -H "X-API-Key: $fullKey"',
-                    style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 11,
+                      color: context.appColors.codeText,
+                    ),
                   ),
                 ),
               ],
@@ -1102,6 +1113,7 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ChannelProvider>();
+    final colors = context.appColors;
 
     return Scaffold(
       appBar: AppBar(
@@ -1110,19 +1122,15 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
             Expanded(child: Text(widget.channel.name, overflow: TextOverflow.ellipsis)),
             if (widget.isReadOnly) ...[
               const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: Colors.blueAccent.withValues(alpha: 0.2),
-                  border: Border.all(color: Colors.blueAccent.withValues(alpha: 0.4)),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Text('VIEW ONLY', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blueAccent)),
-              ),
+              AppStatusPill(label: 'VIEW ONLY', color: colors.primary),
             ],
           ],
         ),
         actions: [
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 4),
+            child: AppThemeToggleButton(),
+          ),
           if (widget.isReadOnly) ...[
             IconButton(
               icon: const Icon(Icons.refresh),
@@ -1134,7 +1142,7 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
               },
             ),
             IconButton(
-              icon: const Icon(Icons.share, color: Colors.tealAccent),
+              icon: Icon(Icons.share, color: colors.accentTeal),
               tooltip: 'Share Public Link',
               onPressed: _shareChannelLink,
             ),
@@ -1144,7 +1152,7 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
                 icon: const Icon(Icons.login, size: 16),
                 label: const Text('Sign In'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blueAccent,
+                  backgroundColor: colors.primary,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                 ),
@@ -1158,17 +1166,17 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
             ),
           ] else ...[
             IconButton(
-              icon: const Icon(Icons.share, color: Colors.tealAccent),
+              icon: Icon(Icons.share, color: colors.accentTeal),
               tooltip: 'Share Public Link',
               onPressed: _shareChannelLink,
             ),
             IconButton(
-              icon: const Icon(Icons.send_to_mobile, color: Colors.amberAccent),
+              icon: Icon(Icons.send_to_mobile, color: colors.warning),
               tooltip: 'Downlink Commands',
               onPressed: _showCommandsDialog,
             ),
             IconButton(
-              icon: const Icon(Icons.school_outlined, color: Colors.cyanAccent),
+              icon: Icon(Icons.school_outlined, color: colors.accentCyan),
               tooltip: 'API Tutorials & Code Generator',
               onPressed: () {
                 Navigator.push(
@@ -1188,33 +1196,33 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
                 if (val == 'clear') _showClearDataDialog();
               },
               itemBuilder: (context) => [
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'export',
                   child: Row(
                     children: [
-                      Icon(Icons.download, size: 20, color: Colors.cyanAccent),
-                      SizedBox(width: 10),
-                      Text('Download / Export Data'),
+                      Icon(Icons.download, size: 20, color: colors.accentCyan),
+                      const SizedBox(width: 10),
+                      const Text('Download / Export Data'),
                     ],
                   ),
                 ),
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'import',
                   child: Row(
                     children: [
-                      Icon(Icons.upload_file, size: 20, color: Colors.tealAccent),
-                      SizedBox(width: 10),
-                      Text('Import Data (CSV)'),
+                      Icon(Icons.upload_file, size: 20, color: colors.accentTeal),
+                      const SizedBox(width: 10),
+                      const Text('Import Data (CSV)'),
                     ],
                   ),
                 ),
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'clear',
                   child: Row(
                     children: [
-                      Icon(Icons.delete_sweep, size: 20, color: Colors.redAccent),
-                      SizedBox(width: 10),
-                      Text('Clear All Telemetry Data'),
+                      Icon(Icons.delete_sweep, size: 20, color: colors.danger),
+                      const SizedBox(width: 10),
+                      const Text('Clear All Telemetry Data'),
                     ],
                   ),
                 ),
@@ -1320,25 +1328,27 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
     required ValueChanged<T?> onChanged,
     IconData? icon,
   }) {
+    final colors = context.appColors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.25)),
+        color: colors.surfaceCard,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colors.border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 15, color: Colors.blueAccent),
+            Icon(icon, size: 15, color: colors.primary),
             const SizedBox(width: 6),
           ],
           DropdownButton<T>(
             value: value,
             isDense: true,
             underline: const SizedBox(),
-            style: const TextStyle(fontSize: 13),
+            style: TextStyle(fontSize: 13, color: colors.textPrimary, fontWeight: FontWeight.w500),
+            dropdownColor: colors.surfaceCard,
             items: items,
             onChanged: onChanged,
           ),
@@ -1348,6 +1358,7 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
   }
 
   Widget _buildTelemetryTab(ChannelProvider provider) {
+    final colors = context.appColors;
     final mqttState = provider.mqttService.currentState;
     final isPollingOnly = widget.isReadOnly && !provider.apiService.isAuthenticated;
     final syncTimeStr = provider.lastSyncedAt != null
@@ -1371,65 +1382,73 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
         padding: const EdgeInsets.all(16),
         children: [
           // Live status bar
-          Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  _StatusIndicator(
-                    state: mqttState,
-                    isPolling: isPollingOnly,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          isPollingOnly
-                              ? 'Live Telemetry (Auto-Refresh 10s)'
-                              : mqttState == BrokerState.connected
-                                  ? 'Live Sync (MQTT Trigger → API)'
-                                  : mqttState == BrokerState.connecting
-                                      ? 'Connecting to Trigger Socket...'
-                                      : 'Offline / Historical View',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+          AppSurfaceCard(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            borderRadius: 14,
+            child: Row(
+              children: [
+                _StatusIndicator(
+                  state: mqttState,
+                  isPolling: isPollingOnly,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isPollingOnly
+                            ? 'Live Telemetry (Auto-Refresh 10s)'
+                            : mqttState == BrokerState.connected
+                                ? 'Live Sync (MQTT Trigger → API)'
+                                : mqttState == BrokerState.connecting
+                                    ? 'Connecting to Trigger Socket...'
+                                    : 'Offline / Historical View',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13.5,
+                          color: colors.textPrimary,
                         ),
-                        if (syncTimeStr.isNotEmpty)
-                          Text(
-                            'Showing up to ${provider.pointLimit} pts$syncTimeStr',
-                            style: const TextStyle(fontSize: 11, color: Colors.grey),
-                          ),
-                      ],
-                    ),
-                  ),
-                  if (isPollingOnly)
-                    IconButton(
-                      icon: const Icon(Icons.refresh, color: Colors.tealAccent),
-                      tooltip: 'Refresh Telemetry',
-                      onPressed: () {
-                        provider.loadFields(widget.channel.id);
-                        provider.refreshTelemetry(widget.channel.id);
-                      },
-                    )
-                  else
-                    IconButton(
-                      icon: Icon(
-                        provider.isLiveStreaming ? Icons.pause_circle_filled : Icons.play_circle_fill,
-                        color: provider.isLiveStreaming ? Colors.orange : Colors.green,
                       ),
-                      tooltip: provider.isLiveStreaming ? 'Pause Live Sync' : 'Resume Live Sync',
-                      onPressed: () {
-                        if (provider.isLiveStreaming) {
-                          provider.stopLiveStream();
-                        } else {
-                          provider.startLiveStream();
-                        }
-                      },
+                      if (syncTimeStr.isNotEmpty)
+                        Text(
+                          'Showing up to ${provider.pointLimit} pts$syncTimeStr',
+                          style: TextStyle(fontSize: 11.5, color: colors.textSecondary),
+                        ),
+                    ],
+                  ),
+                ),
+                if (isPollingOnly)
+                  IconButton(
+                    icon: Icon(Icons.refresh_rounded, color: colors.accentTeal),
+                    tooltip: 'Refresh Telemetry',
+                    onPressed: () {
+                      provider.loadFields(widget.channel.id);
+                      provider.refreshTelemetry(widget.channel.id);
+                    },
+                  )
+                else
+                  IconButton(
+                    icon: Icon(
+                      provider.isLiveStreaming
+                          ? Icons.pause_circle_filled_rounded
+                          : Icons.play_circle_fill_rounded,
+                      color: provider.isLiveStreaming
+                          ? colors.warning
+                          : colors.success,
                     ),
-                ],
-              ),
+                    tooltip: provider.isLiveStreaming
+                        ? 'Pause Live Sync'
+                        : 'Resume Live Sync',
+                    onPressed: () {
+                      if (provider.isLiveStreaming) {
+                        provider.stopLiveStream();
+                      } else {
+                        provider.startLiveStream();
+                      }
+                    },
+                  ),
+              ],
             ),
           ),
           const SizedBox(height: 16),
@@ -1604,8 +1623,9 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
 
   Widget _buildWidgetTypeMenu(BuildContext context, ChannelField field) {
     if (widget.isReadOnly || field.id <= 0) return const SizedBox();
+    final colors = context.appColors;
     return PopupMenuButton<String>(
-      icon: const Icon(Icons.tune, size: 18, color: Colors.grey),
+      icon: Icon(Icons.tune_rounded, size: 18, color: colors.textSecondary),
       tooltip: 'Change Widget Type',
       onSelected: (newType) async {
         try {
@@ -1620,43 +1640,43 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
         }
       },
       itemBuilder: (ctx) => [
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'line',
           child: Row(
             children: [
-              Icon(Icons.show_chart, size: 18, color: Colors.blueAccent),
-              SizedBox(width: 8),
-              Text('Line Chart'),
+              Icon(Icons.show_chart, size: 18, color: colors.primary),
+              const SizedBox(width: 8),
+              const Text('Line Chart'),
             ],
           ),
         ),
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'gauge',
           child: Row(
             children: [
-              Icon(Icons.speed, size: 18, color: Colors.cyanAccent),
-              SizedBox(width: 8),
-              Text('Radial Gauge'),
+              Icon(Icons.speed, size: 18, color: colors.accentCyan),
+              const SizedBox(width: 8),
+              const Text('Radial Gauge'),
             ],
           ),
         ),
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'kpi',
           child: Row(
             children: [
-              Icon(Icons.pin_outlined, size: 18, color: Colors.amberAccent),
-              SizedBox(width: 8),
-              Text('KPI Metric Card'),
+              Icon(Icons.pin_outlined, size: 18, color: colors.warning),
+              const SizedBox(width: 8),
+              const Text('KPI Metric Card'),
             ],
           ),
         ),
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'status',
           child: Row(
             children: [
-              Icon(Icons.radio_button_checked, size: 18, color: Colors.greenAccent),
-              SizedBox(width: 8),
-              Text('Status / LED Indicator'),
+              Icon(Icons.radio_button_checked, size: 18, color: colors.success),
+              const SizedBox(width: 8),
+              const Text('Status / LED Indicator'),
             ],
           ),
         ),
@@ -1666,6 +1686,7 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
 
   Widget _buildDevicesTab(ChannelProvider provider) {
     final config = AppConfig();
+    final colors = context.appColors;
 
     return Scaffold(
       body: ListView(
@@ -1674,20 +1695,20 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
           // Connection Info Banner
           Card(
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: Colors.amber.withValues(alpha: 0.3)),
+              borderRadius: BorderRadius.circular(14),
+              side: BorderSide(color: colors.warning.withValues(alpha: 0.35)),
             ),
-            color: Colors.amber.withValues(alpha: 0.05),
+            color: colors.warning.withValues(alpha: 0.08),
             child: Padding(
               padding: const EdgeInsets.all(14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
+                  Row(
                     children: [
-                      Icon(Icons.hub, size: 18, color: Colors.amberAccent),
-                      SizedBox(width: 8),
-                      Text('MQTT Broker Connection Info', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      Icon(Icons.hub, size: 18, color: colors.warning),
+                      const SizedBox(width: 8),
+                      const Text('MQTT Broker Connection Info', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                     ],
                   ),
                   const SizedBox(height: 10),
@@ -1712,13 +1733,13 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
           ),
           const SizedBox(height: 12),
           Card(
-            color: Colors.teal.withValues(alpha: 0.1),
+            color: colors.accentTeal.withValues(alpha: 0.09),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: Colors.teal.withValues(alpha: 0.3)),
+              borderRadius: BorderRadius.circular(14),
+              side: BorderSide(color: colors.accentTeal.withValues(alpha: 0.35)),
             ),
             child: ListTile(
-              leading: const Icon(Icons.school, color: Colors.tealAccent),
+              leading: Icon(Icons.school, color: colors.accentTeal),
               title: const Text('MQTT Device Tutorials & Code', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
               subtitle: const Text('View ESP32 (Arduino / MicroPython) and Python MQTT streaming code examples.', style: TextStyle(fontSize: 12)),
               trailing: const Icon(Icons.arrow_forward_ios, size: 14),
@@ -1797,6 +1818,7 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
 
   Widget _buildApiKeysTab(ChannelProvider provider) {
     final config = AppConfig();
+    final colors = context.appColors;
 
     return Scaffold(
       body: ListView(
@@ -1805,20 +1827,20 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
           // Connection Info Banner
           Card(
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: Colors.cyan.withValues(alpha: 0.3)),
+              borderRadius: BorderRadius.circular(14),
+              side: BorderSide(color: colors.accentCyan.withValues(alpha: 0.35)),
             ),
-            color: Colors.cyan.withValues(alpha: 0.05),
+            color: colors.accentCyan.withValues(alpha: 0.07),
             child: Padding(
               padding: const EdgeInsets.all(14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
+                  Row(
                     children: [
-                      Icon(Icons.http, size: 20, color: Colors.cyanAccent),
-                      SizedBox(width: 8),
-                      Text('HTTP REST API Connection Info', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      Icon(Icons.http, size: 20, color: colors.accentCyan),
+                      const SizedBox(width: 8),
+                      const Text('HTTP REST API Connection Info', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                     ],
                   ),
                   const SizedBox(height: 10),
@@ -1843,13 +1865,13 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
           ),
           const SizedBox(height: 12),
           Card(
-            color: Colors.cyan.withValues(alpha: 0.1),
+            color: colors.accentCyan.withValues(alpha: 0.1),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: Colors.cyan.withValues(alpha: 0.3)),
+              borderRadius: BorderRadius.circular(14),
+              side: BorderSide(color: colors.accentCyan.withValues(alpha: 0.35)),
             ),
             child: ListTile(
-              leading: const Icon(Icons.integration_instructions, color: Colors.cyanAccent),
+              leading: Icon(Icons.integration_instructions, color: colors.accentCyan),
               title: const Text('HTTP REST API Tutorials & Code', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
               subtitle: const Text('View pre-filled cURL, Python, JavaScript, and ESP32 HTTP POST examples.', style: TextStyle(fontSize: 12)),
               trailing: const Icon(Icons.arrow_forward_ios, size: 14),
@@ -1917,13 +1939,14 @@ class _StatusIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final color = isPolling
-        ? Colors.tealAccent
+        ? colors.accentTeal
         : state == BrokerState.connected
-            ? Colors.green
+            ? colors.success
             : state == BrokerState.connecting
-                ? Colors.orange
-                : Colors.grey;
+                ? colors.warning
+                : colors.textTertiary;
 
     return Container(
       width: 12,
@@ -1948,22 +1971,30 @@ class _MetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final valStr = value is double ? value.toStringAsFixed(2) : value.toString();
 
     return Container(
-      width: 150,
+      width: 156,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+        color: colors.surfaceCard,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: colors.border),
+        boxShadow: [
+          BoxShadow(color: colors.shadow, blurRadius: 10, offset: const Offset(0, 3)),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             keyName,
-            style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 12,
+              color: colors.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -1975,14 +2006,18 @@ class _MetricCard extends StatelessWidget {
               Flexible(
                 child: Text(
                   valStr,
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: colors.textPrimary,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (unit != null) ...[
                 const SizedBox(width: 4),
-                Text(unit!, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                Text(unit!, style: TextStyle(fontSize: 12, color: colors.textSecondary)),
               ],
             ],
           ),
@@ -2009,6 +2044,7 @@ class _TimeSeriesChartCard extends StatelessWidget {
   Widget build(BuildContext context) {
     if (points.isEmpty) return const SizedBox();
 
+    final colors = context.appColors;
     final spots = <FlSpot>[];
     for (int i = 0; i < points.length; i++) {
       spots.add(FlSpot(i.toDouble(), points[i].value));
@@ -2020,9 +2056,12 @@ class _TimeSeriesChartCard extends StatelessWidget {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: colors.border),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -2032,45 +2071,95 @@ class _TimeSeriesChartCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     fieldLabel + (unit != null ? ' ($unit)' : ''),
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: colors.textPrimary,
+                    ),
                   ),
                 ),
-                Text(
-                  'Now: ${latestVal.toStringAsFixed(2)}',
-                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blueAccent),
+                AppStatusPill(
+                  label: 'Now ${latestVal.toStringAsFixed(2)}${unit != null ? " $unit" : ""}',
+                  color: colors.primary,
                 ),
                 if (menuButton != null) ...[
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   menuButton!,
                 ],
               ],
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             Text(
               'Min: ${minVal.toStringAsFixed(2)}  •  Max: ${maxVal.toStringAsFixed(2)}  •  Samples: ${points.length}',
-              style: const TextStyle(fontSize: 11, color: Colors.grey),
+              style: TextStyle(fontSize: 11.5, color: colors.textSecondary),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
             SizedBox(
-              height: 180,
+              height: 190,
               child: LineChart(
                 LineChartData(
-                  gridData: const FlGridData(show: true, drawVerticalLine: false),
-                  titlesData: const FlTitlesData(
-                    rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    getDrawingHorizontalLine: (_) => FlLine(
+                      color: colors.chartGrid,
+                      strokeWidth: 1,
+                    ),
+                  ),
+                  titlesData: FlTitlesData(
+                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    bottomTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 42,
+                        getTitlesWidget: (val, meta) => Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: Text(
+                            val.toStringAsFixed(val.abs() >= 100 ? 0 : 1),
+                            style: TextStyle(fontSize: 10, color: colors.textTertiary),
+                            textAlign: TextAlign.right,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                   borderData: FlBorderData(show: false),
+                  lineTouchData: LineTouchData(
+                    touchTooltipData: LineTouchTooltipData(
+                      getTooltipColor: (_) => colors.surfaceElevated,
+                      getTooltipItems: (touchedSpots) => touchedSpots
+                          .map(
+                            (spot) => LineTooltipItem(
+                              spot.y.toStringAsFixed(2),
+                              TextStyle(
+                                color: colors.textPrimary,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ),
                   lineBarsData: [
                     LineChartBarData(
                       spots: spots,
                       isCurved: points.length <= 300,
-                      color: Colors.blueAccent,
+                      color: colors.primary,
                       barWidth: points.length > 1000 ? 1.5 : 2.5,
                       dotData: const FlDotData(show: false),
                       belowBarData: BarAreaData(
                         show: true,
-                        color: Colors.blueAccent.withValues(alpha: 0.12),
+                        gradient: LinearGradient(
+                          colors: [
+                            colors.primary.withValues(alpha: 0.24),
+                            colors.primary.withValues(alpha: 0.0),
+                          ],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
                       ),
                     ),
                   ],
@@ -2108,11 +2197,15 @@ class _RadialGaugeCard extends StatelessWidget {
     final range = (maxVal - minVal);
     final double pct = range > 0 ? ((latestVal - minVal) / range).clamp(0.0, 1.0) : 0.5;
 
+    final colors = context.appColors;
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: colors.border),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         child: Column(
           children: [
             Row(
@@ -2121,12 +2214,16 @@ class _RadialGaugeCard extends StatelessWidget {
                 Expanded(
                   child: Row(
                     children: [
-                      const Icon(Icons.speed, size: 20, color: Colors.cyanAccent),
+                      Icon(Icons.speed, size: 20, color: colors.accentCyan),
                       const SizedBox(width: 8),
                       Flexible(
                         child: Text(
                           field.displayName + (field.unit != null ? ' (${field.unit})' : ''),
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: colors.textPrimary,
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -2147,13 +2244,17 @@ class _RadialGaugeCard extends StatelessWidget {
                   unitText: field.unit ?? '',
                   minText: minVal.toStringAsFixed(1),
                   maxText: maxVal.toStringAsFixed(1),
+                  valueColor: colors.textPrimary,
+                  mutedColor: colors.textSecondary,
+                  trackColor: colors.gaugeTrack,
+                  gradientColors: [colors.accentTeal, colors.accentCyan, colors.primary],
                 ),
               ),
             ),
             const SizedBox(height: 8),
             Text(
               'Min: ${minVal.toStringAsFixed(2)}  •  Max: ${maxVal.toStringAsFixed(2)}  •  Samples: ${points.length}',
-              style: const TextStyle(fontSize: 11, color: Colors.grey),
+              style: TextStyle(fontSize: 11.5, color: colors.textSecondary),
             ),
           ],
         ),
@@ -2168,6 +2269,10 @@ class _GaugePainter extends CustomPainter {
   final String unitText;
   final String minText;
   final String maxText;
+  final Color valueColor;
+  final Color mutedColor;
+  final Color trackColor;
+  final List<Color> gradientColors;
 
   _GaugePainter({
     required this.percent,
@@ -2175,6 +2280,10 @@ class _GaugePainter extends CustomPainter {
     required this.unitText,
     required this.minText,
     required this.maxText,
+    required this.valueColor,
+    required this.mutedColor,
+    required this.trackColor,
+    required this.gradientColors,
   });
 
   @override
@@ -2187,7 +2296,7 @@ class _GaugePainter extends CustomPainter {
 
     // Background Arc
     final bgPaint = Paint()
-      ..color = Colors.grey.withValues(alpha: 0.2)
+      ..color = trackColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = 14
       ..strokeCap = StrokeCap.round;
@@ -2202,8 +2311,8 @@ class _GaugePainter extends CustomPainter {
 
     // Active Gradient Arc
     final activePaint = Paint()
-      ..shader = const SweepGradient(
-        colors: [Colors.tealAccent, Colors.cyanAccent, Colors.blueAccent],
+      ..shader = SweepGradient(
+        colors: gradientColors,
         startAngle: 0.0,
         endAngle: math.pi * 2,
       ).createShader(Rect.fromCircle(center: center, radius: radius))
@@ -2224,10 +2333,10 @@ class _GaugePainter extends CustomPainter {
     final textPainter = TextPainter(
       text: TextSpan(
         text: valueText,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 26,
           fontWeight: FontWeight.bold,
-          color: Colors.white,
+          color: valueColor,
         ),
       ),
       textDirection: TextDirection.ltr,
@@ -2243,7 +2352,7 @@ class _GaugePainter extends CustomPainter {
       final unitPainter = TextPainter(
         text: TextSpan(
           text: unitText,
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
+          style: TextStyle(fontSize: 12, color: mutedColor),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
@@ -2256,13 +2365,13 @@ class _GaugePainter extends CustomPainter {
 
     // Min / Max labels at arc tips
     final minPainter = TextPainter(
-      text: TextSpan(text: minText, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+      text: TextSpan(text: minText, style: TextStyle(fontSize: 10, color: mutedColor)),
       textDirection: TextDirection.ltr,
     )..layout();
     minPainter.paint(canvas, Offset(center.dx - radius - 10, center.dy + radius * 0.45));
 
     final maxPainter = TextPainter(
-      text: TextSpan(text: maxText, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+      text: TextSpan(text: maxText, style: TextStyle(fontSize: 10, color: mutedColor)),
       textDirection: TextDirection.ltr,
     )..layout();
     maxPainter.paint(canvas, Offset(center.dx + radius - maxPainter.width + 10, center.dy + radius * 0.45));
@@ -2272,7 +2381,9 @@ class _GaugePainter extends CustomPainter {
   bool shouldRepaint(covariant _GaugePainter oldDelegate) {
     return oldDelegate.percent != percent ||
         oldDelegate.valueText != valueText ||
-        oldDelegate.unitText != unitText;
+        oldDelegate.unitText != unitText ||
+        oldDelegate.valueColor != valueColor ||
+        oldDelegate.trackColor != trackColor;
   }
 }
 
@@ -2289,6 +2400,7 @@ class _KpiMetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final double latestVal = points.isNotEmpty ? points.last.value : 0.0;
     final double minVal = points.isNotEmpty
         ? points.map((p) => p.value).reduce((a, b) => a < b ? a : b)
@@ -2302,7 +2414,10 @@ class _KpiMetricCard extends StatelessWidget {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: colors.border),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -2317,16 +2432,20 @@ class _KpiMetricCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.amberAccent.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(8),
+                          color: colors.warning.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(Icons.pin_outlined, size: 20, color: Colors.amberAccent),
+                        child: Icon(Icons.pin_outlined, size: 20, color: colors.warning),
                       ),
                       const SizedBox(width: 10),
                       Flexible(
                         child: Text(
                           field.displayName,
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: colors.textPrimary,
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -2343,10 +2462,10 @@ class _KpiMetricCard extends StatelessWidget {
               children: [
                 Text(
                   latestVal.toStringAsFixed(2),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 38,
                     fontWeight: FontWeight.w900,
-                    color: Colors.amberAccent,
+                    color: colors.warning,
                     letterSpacing: -1,
                   ),
                 ),
@@ -2354,7 +2473,11 @@ class _KpiMetricCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     field.unit!,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.grey),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: colors.textSecondary,
+                    ),
                   ),
                 ],
               ],
@@ -2363,17 +2486,17 @@ class _KpiMetricCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
-                color: Theme.of(context).cardColor.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+                color: colors.surfaceElevated,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: colors.border),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _StatItem(label: 'Min', value: minVal.toStringAsFixed(2), color: Colors.blueAccent),
-                  _StatItem(label: 'Average', value: avgVal.toStringAsFixed(2), color: Colors.cyanAccent),
-                  _StatItem(label: 'Max', value: maxVal.toStringAsFixed(2), color: Colors.orangeAccent),
-                  _StatItem(label: 'Samples', value: points.length.toString(), color: Colors.white70),
+                  _StatItem(label: 'Min', value: minVal.toStringAsFixed(2), color: colors.primary),
+                  _StatItem(label: 'Average', value: avgVal.toStringAsFixed(2), color: colors.accentCyan),
+                  _StatItem(label: 'Max', value: maxVal.toStringAsFixed(2), color: colors.warning),
+                  _StatItem(label: 'Samples', value: points.length.toString(), color: colors.textPrimary),
                 ],
               ),
             ),
@@ -2416,12 +2539,17 @@ class _StatusIndicatorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final double latestVal = points.isNotEmpty ? points.last.value : 0.0;
     final bool isActive = latestVal > 0.0;
+    final stateColor = isActive ? colors.success : colors.danger;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: colors.border),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -2436,20 +2564,24 @@ class _StatusIndicatorCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: (isActive ? Colors.greenAccent : Colors.redAccent).withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(8),
+                          color: stateColor.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
                           isActive ? Icons.radio_button_checked : Icons.radio_button_off,
                           size: 20,
-                          color: isActive ? Colors.greenAccent : Colors.redAccent,
+                          color: stateColor,
                         ),
                       ),
                       const SizedBox(width: 10),
                       Flexible(
                         child: Text(
                           field.displayName,
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: colors.textPrimary,
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -2468,14 +2600,14 @@ class _StatusIndicatorCard extends StatelessWidget {
                     height: 90,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: (isActive ? Colors.greenAccent : Colors.redAccent).withValues(alpha: 0.15),
+                      color: stateColor.withValues(alpha: 0.14),
                       border: Border.all(
-                        color: isActive ? Colors.greenAccent : Colors.redAccent,
+                        color: stateColor,
                         width: 3,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: (isActive ? Colors.greenAccent : Colors.redAccent).withValues(alpha: 0.3),
+                          color: stateColor.withValues(alpha: 0.25),
                           blurRadius: 18,
                           spreadRadius: 2,
                         ),
@@ -2484,7 +2616,7 @@ class _StatusIndicatorCard extends StatelessWidget {
                     child: Icon(
                       isActive ? Icons.power : Icons.power_off,
                       size: 42,
-                      color: isActive ? Colors.greenAccent : Colors.redAccent,
+                      color: stateColor,
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -2494,13 +2626,13 @@ class _StatusIndicatorCard extends StatelessWidget {
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.2,
-                      color: isActive ? Colors.greenAccent : Colors.redAccent,
+                      color: stateColor,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'Raw Value: ${latestVal.toStringAsFixed(2)}${field.unit != null ? " ${field.unit}" : ""}',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    style: TextStyle(fontSize: 12, color: colors.textSecondary),
                   ),
                 ],
               ),
@@ -2508,7 +2640,7 @@ class _StatusIndicatorCard extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               'Total Samples Recorded: ${points.length}',
-              style: const TextStyle(fontSize: 11, color: Colors.grey),
+              style: TextStyle(fontSize: 11.5, color: colors.textSecondary),
             ),
           ],
         ),
@@ -2584,9 +2716,9 @@ class _CopyableBadge extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+          color: context.appColors.surfaceCard,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: context.appColors.border),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2595,17 +2727,22 @@ class _CopyableBadge extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                  Text(label, style: TextStyle(fontSize: 10, color: context.appColors.textSecondary)),
                   const SizedBox(height: 2),
                   Text(
                     value,
-                    style: const TextStyle(fontFamily: 'monospace', fontSize: 11, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: context.appColors.textPrimary,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.copy, size: 14, color: Colors.grey),
+            Icon(Icons.copy, size: 14, color: context.appColors.textTertiary),
           ],
         ),
       ),
@@ -2642,17 +2779,18 @@ class _DeviceItemCardState extends State<_DeviceItemCard> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final dev = widget.device;
-    Color scopeColor;
-    String scopeLabel;
+    final Color scopeColor;
+    final String scopeLabel;
     if (dev.scope == 'pubsub') {
-      scopeColor = Colors.purpleAccent;
+      scopeColor = colors.accentTeal;
       scopeLabel = 'PUB & SUB';
     } else if (dev.scope == 'subscribe') {
-      scopeColor = Colors.blueAccent;
+      scopeColor = colors.primary;
       scopeLabel = 'SUB ONLY';
     } else {
-      scopeColor = Colors.greenAccent;
+      scopeColor = colors.success;
       scopeLabel = 'PUB ONLY';
     }
 
@@ -2660,7 +2798,10 @@ class _DeviceItemCardState extends State<_DeviceItemCard> {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: colors.border),
+      ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Column(
@@ -2669,8 +2810,13 @@ class _DeviceItemCardState extends State<_DeviceItemCard> {
             Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: dev.isActive ? Colors.cyan.withValues(alpha: 0.15) : Colors.grey.withValues(alpha: 0.15),
-                  child: Icon(Icons.memory, color: dev.isActive ? Colors.cyanAccent : Colors.grey),
+                  backgroundColor: dev.isActive
+                      ? colors.accentCyan.withValues(alpha: 0.14)
+                      : colors.surfaceElevated,
+                  child: Icon(
+                    Icons.memory,
+                    color: dev.isActive ? colors.accentCyan : colors.textTertiary,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -2679,7 +2825,11 @@ class _DeviceItemCardState extends State<_DeviceItemCard> {
                       Flexible(
                         child: Text(
                           dev.name,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: colors.textPrimary,
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -2687,9 +2837,9 @@ class _DeviceItemCardState extends State<_DeviceItemCard> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: scopeColor.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: scopeColor.withValues(alpha: 0.5)),
+                          color: scopeColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: scopeColor.withValues(alpha: 0.45)),
                         ),
                         child: Text(
                           scopeLabel,
@@ -2701,11 +2851,11 @@ class _DeviceItemCardState extends State<_DeviceItemCard> {
                 ),
                 Switch(
                   value: dev.isActive,
-                  activeThumbColor: Colors.greenAccent,
+                  activeThumbColor: colors.success,
                   onChanged: widget.onToggleActive,
                 ),
                 IconButton(
-                  icon: const Icon(Icons.vpn_key_outlined, size: 20, color: Colors.amberAccent),
+                  icon: Icon(Icons.vpn_key_outlined, size: 20, color: colors.warning),
                   tooltip: 'View Credentials',
                   onPressed: widget.onViewCredentials,
                 ),
@@ -2715,7 +2865,7 @@ class _DeviceItemCardState extends State<_DeviceItemCard> {
                   onPressed: widget.onEdit,
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                  icon: Icon(Icons.delete_outline, color: colors.danger, size: 20),
                   tooltip: 'Delete Device',
                   onPressed: widget.onDelete,
                 ),
@@ -2796,9 +2946,13 @@ class _DeviceItemCardState extends State<_DeviceItemCard> {
                         const SizedBox(width: 4),
                         InkWell(
                           onTap: widget.onResetPassword,
-                          child: const Text(
+                          child: Text(
                             'Reset',
-                            style: TextStyle(fontSize: 11, color: Colors.amberAccent, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: context.appColors.warning,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
@@ -2835,12 +2989,17 @@ class _ApiKeyCardItemState extends State<_ApiKeyCardItem> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final k = widget.apiKeyItem;
     final hasFullKey = k.apiKey != null && k.apiKey!.isNotEmpty;
+    final scopeColor = k.scope == 'write' ? colors.success : colors.primary;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: colors.border),
+      ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Column(
@@ -2849,27 +3008,40 @@ class _ApiKeyCardItemState extends State<_ApiKeyCardItem> {
             Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: k.scope == 'write' ? Colors.green.withValues(alpha: 0.15) : Colors.blue.withValues(alpha: 0.15),
-                  child: Icon(k.scope == 'write' ? Icons.upload : Icons.download, color: k.scope == 'write' ? Colors.green : Colors.blue),
+                  backgroundColor: scopeColor.withValues(alpha: 0.14),
+                  child: Icon(
+                    k.scope == 'write' ? Icons.upload : Icons.download,
+                    color: scopeColor,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('${k.scope.toUpperCase()} API KEY', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      Text(
+                        '${k.scope.toUpperCase()} API KEY',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: colors.textPrimary,
+                        ),
+                      ),
                       const SizedBox(height: 2),
-                      Text('Created ${DateFormat.yMMMd().format(k.createdAt)}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                      Text(
+                        'Created ${DateFormat.yMMMd().format(k.createdAt)}',
+                        style: TextStyle(fontSize: 11, color: colors.textSecondary),
+                      ),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.info_outline, size: 20, color: Colors.cyanAccent),
+                  icon: Icon(Icons.info_outline, size: 20, color: colors.accentCyan),
                   tooltip: 'View API Details & Snippets',
                   onPressed: widget.onViewDetails,
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                  icon: Icon(Icons.delete_outline, color: colors.danger, size: 20),
                   tooltip: 'Revoke Key',
                   onPressed: widget.onDelete,
                 ),

@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import '../config.dart';
 import '../models/channel.dart';
 import '../providers/channel_provider.dart';
+import '../theme/app_theme.dart';
+import '../widgets/app_ui.dart';
 
 class ApiTutorialScreen extends StatefulWidget {
   final Channel? channel;
@@ -87,12 +89,13 @@ class _ApiTutorialScreenState extends State<ApiTutorialScreen>
   }
 
   void _copyToClipboard(String text, String label) {
+    final colors = context.appColors;
     Clipboard.setData(ClipboardData(text: text));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle, color: Colors.greenAccent, size: 20),
+            Icon(Icons.check_circle, color: colors.success, size: 20),
             const SizedBox(width: 8),
             Text('Copied $label to clipboard!'),
           ],
@@ -115,15 +118,22 @@ class _ApiTutorialScreenState extends State<ApiTutorialScreen>
   Widget build(BuildContext context) {
     final channels = context.watch<ChannelProvider>().channels;
 
+    final colors = context.appColors;
     return Scaffold(
       appBar: AppBar(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.integration_instructions_outlined, color: Colors.cyanAccent),
-            SizedBox(width: 10),
-            Text('API & Integration Tutorial'),
+            Icon(Icons.integration_instructions_outlined, color: colors.accentCyan),
+            const SizedBox(width: 10),
+            const Text('API & Integration Tutorial'),
           ],
         ),
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 16),
+            child: AppThemeToggleButton(),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
@@ -160,10 +170,13 @@ class _ApiTutorialScreenState extends State<ApiTutorialScreen>
   }
 
   Widget _buildContextBar(List<Channel> channels) {
-    final theme = Theme.of(context);
+    final colors = context.appColors;
 
     return Container(
-      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+      decoration: BoxDecoration(
+        color: colors.surfaceCard,
+        border: Border(bottom: BorderSide(color: colors.border)),
+      ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Wrap(
         spacing: 16,
@@ -174,7 +187,7 @@ class _ApiTutorialScreenState extends State<ApiTutorialScreen>
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.sensors, size: 20, color: Colors.cyanAccent),
+              Icon(Icons.sensors, size: 20, color: colors.accentCyan),
               const SizedBox(width: 8),
               const Text('Active Channel: ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
               if (channels.isEmpty)
@@ -208,7 +221,7 @@ class _ApiTutorialScreenState extends State<ApiTutorialScreen>
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.key, size: 18, color: Colors.amberAccent),
+                Icon(Icons.key, size: 18, color: colors.warning),
                 const SizedBox(width: 6),
                 const Text('Active Key: ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                 DropdownButton<String>(
@@ -241,11 +254,11 @@ class _ApiTutorialScreenState extends State<ApiTutorialScreen>
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.link, size: 18, color: Colors.grey),
+              Icon(Icons.link, size: 18, color: colors.textSecondary),
               const SizedBox(width: 6),
               Text(
                 'API Base: $_apiBase',
-                style: const TextStyle(fontSize: 12, fontFamily: 'monospace', color: Colors.grey),
+                style: TextStyle(fontSize: 12, fontFamily: 'monospace', color: colors.textSecondary),
               ),
             ],
           ),
@@ -345,9 +358,13 @@ class _ApiTutorialScreenState extends State<ApiTutorialScreen>
     required String description,
     required IconData icon,
   }) {
+    final colors = context.appColors;
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: colors.border),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -355,7 +372,8 @@ class _ApiTutorialScreenState extends State<ApiTutorialScreen>
           children: [
             CircleAvatar(
               radius: 16,
-              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+              backgroundColor: colors.primarySoft,
+              foregroundColor: colors.primary,
               child: Text(step, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
             ),
             const SizedBox(width: 14),
@@ -365,13 +383,16 @@ class _ApiTutorialScreenState extends State<ApiTutorialScreen>
                 children: [
                   Row(
                     children: [
-                      Icon(icon, size: 18, color: Colors.cyanAccent),
+                      Icon(icon, size: 18, color: colors.accentCyan),
                       const SizedBox(width: 6),
                       Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Text(description, style: const TextStyle(fontSize: 13, color: Colors.grey, height: 1.35)),
+                  Text(
+                    description,
+                    style: TextStyle(fontSize: 13, color: colors.textSecondary, height: 1.35),
+                  ),
                 ],
               ),
             ),
@@ -382,8 +403,12 @@ class _ApiTutorialScreenState extends State<ApiTutorialScreen>
   }
 
   Widget _buildComparisonTable() {
+    final colors = context.appColors;
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: colors.border),
+      ),
       child: Table(
         columnWidths: const {
           0: FlexColumnWidth(1.2),
@@ -391,12 +416,15 @@ class _ApiTutorialScreenState extends State<ApiTutorialScreen>
           2: FlexColumnWidth(1.5),
         },
         border: TableBorder(
-          horizontalInside: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+          horizontalInside: BorderSide(color: colors.border),
         ),
-        children: const [
+        children: [
           TableRow(
-            decoration: BoxDecoration(color: Colors.black26),
-            children: [
+            decoration: BoxDecoration(
+              color: colors.surfaceElevated,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+            ),
+            children: const [
               Padding(
                 padding: EdgeInsets.all(10),
                 child: Text('Feature', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
@@ -665,6 +693,7 @@ fetchHistory();''';
   // TAB 4: MQTT Streaming (Real-Time Pub/Sub)
   // ===========================================================================
   Widget _buildMqttTab() {
+    final colors = context.appColors;
     final mosquittoPub = '''# 1. Publish Telemetry via Mosquitto CLI (Port $_mqttPort TLS)
 mosquitto_pub -h "$_mqttHost" -p $_mqttPort \\
   -u "d_YOUR_DEVICE_USERNAME" \\
@@ -762,18 +791,18 @@ void loop() {
       children: [
         Card(
           elevation: 0,
-          color: Colors.teal.withValues(alpha: 0.1),
+          color: colors.accentTeal.withValues(alpha: 0.1),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: Colors.teal.withValues(alpha: 0.3)),
+            borderRadius: BorderRadius.circular(14),
+            side: BorderSide(color: colors.accentTeal.withValues(alpha: 0.35)),
           ),
-          child: const Padding(
-            padding: EdgeInsets.all(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                Icon(Icons.bolt, color: Colors.tealAccent, size: 28),
-                SizedBox(width: 14),
-                Expanded(
+                Icon(Icons.bolt, color: colors.accentTeal, size: 28),
+                const SizedBox(width: 14),
+                const Expanded(
                   child: Text(
                     'MQTT is designed for microsecond, bi-directional telemetry streaming. To connect, generate dedicated hardware credentials in the "Devices" tab of your channel.',
                     style: TextStyle(fontSize: 13, height: 1.4),
@@ -797,11 +826,15 @@ void loop() {
   // TAB 5: Live Tester (Interactive Telemetry Ping)
   // ===========================================================================
   Widget _buildLiveTesterTab() {
+    final colors = context.appColors;
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
         Card(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: BorderSide(color: colors.border),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(18),
             child: Column(
@@ -809,7 +842,7 @@ void loop() {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.speed, color: Colors.cyanAccent),
+                    Icon(Icons.speed, color: colors.accentCyan),
                     const SizedBox(width: 8),
                     Text(
                       'Send Live Telemetry to Channel #$_channelId',
@@ -818,9 +851,9 @@ void loop() {
                   ],
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Test your channel ingestion right from the app. Edit the JSON packet below and click "Send Telemetry". The Python Ingestion Bridge will record it in TimescaleDB and the live dashboard will update immediately.',
-                  style: TextStyle(fontSize: 13, color: Colors.grey),
+                  style: TextStyle(fontSize: 13, color: colors.textSecondary),
                 ),
                 const SizedBox(height: 18),
                 const Text(
@@ -831,11 +864,15 @@ void loop() {
                 TextField(
                   controller: _testPayloadController,
                   maxLines: 5,
-                  style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 13,
+                    color: colors.codeText,
+                  ),
                   decoration: InputDecoration(
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                     filled: true,
-                    fillColor: Colors.black12,
+                    fillColor: colors.codeBg,
                     hintText: '{\n  "temp": 25.0\n}',
                   ),
                 ),
@@ -852,7 +889,7 @@ void loop() {
                           : const Icon(Icons.send_rounded),
                       label: Text(_isTesting ? 'Sending...' : 'Send Telemetry Now'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.cyan.shade700,
+                        backgroundColor: colors.primary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       ),
@@ -874,48 +911,56 @@ void loop() {
                 ),
                 if (_testResult != null) ...[
                   const SizedBox(height: 18),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: (_testSuccess == true ? Colors.green : Colors.red)
-                          .withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: _testSuccess == true ? Colors.greenAccent : Colors.redAccent,
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+                  Builder(
+                    builder: (context) {
+                      final statusColor =
+                          _testSuccess == true ? colors.success : colors.danger;
+                      return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: statusColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: statusColor.withValues(alpha: 0.45),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(
-                              _testSuccess == true ? Icons.check_circle : Icons.error_outline,
-                              color: _testSuccess == true ? Colors.greenAccent : Colors.redAccent,
-                              size: 18,
+                            Row(
+                              children: [
+                                Icon(
+                                  _testSuccess == true
+                                      ? Icons.check_circle
+                                      : Icons.error_outline,
+                                  color: statusColor,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  _testSuccess == true
+                                      ? 'Success! Telemetry Ingested'
+                                      : 'Failed to Ingest',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: statusColor,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(height: 6),
                             Text(
-                              _testSuccess == true
-                                  ? 'Success! Telemetry Ingested'
-                                  : 'Failed to Ingest',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: _testSuccess == true
-                                    ? Colors.greenAccent
-                                    : Colors.redAccent,
+                              _testResult!,
+                              style: const TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 12,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          _testResult!,
-                          style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
-                        ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
                 ],
               ],
@@ -973,13 +1018,15 @@ void loop() {
     required String path,
     required String description,
   }) {
+    final colors = context.appColors;
     final isPost = method == 'POST';
+    final badgeColor = isPost ? colors.success : colors.primary;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: (isPost ? Colors.green : Colors.blue).withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: (isPost ? Colors.green : Colors.blue).withValues(alpha: 0.4)),
+        color: badgeColor.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: badgeColor.withValues(alpha: 0.35)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -989,8 +1036,8 @@ void loop() {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: isPost ? Colors.green.shade800 : Colors.blue.shade800,
-                  borderRadius: BorderRadius.circular(4),
+                  color: badgeColor,
+                  borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
                   method,
@@ -1001,21 +1048,30 @@ void loop() {
               Expanded(
                 child: Text(
                   path,
-                  style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 13),
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: colors.textPrimary,
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 6),
-          Text(description, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          Text(description, style: TextStyle(fontSize: 12, color: colors.textSecondary)),
         ],
       ),
     );
   }
 
   Widget _buildCodeSection(String title, String code) {
+    final colors = context.appColors;
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: colors.border),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
@@ -1026,7 +1082,11 @@ void loop() {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.cyanAccent),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: colors.accentCyan,
+                  ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.copy, size: 18),
@@ -1040,15 +1100,17 @@ void loop() {
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.black26,
-                borderRadius: BorderRadius.circular(8),
+                color: colors.codeBg,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: colors.border),
               ),
               child: SelectableText(
                 code,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'monospace',
                   fontSize: 12,
-                  height: 1.4,
+                  height: 1.45,
+                  color: colors.codeText,
                 ),
               ),
             ),

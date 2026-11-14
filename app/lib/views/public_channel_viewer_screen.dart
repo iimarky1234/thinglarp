@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../models/channel.dart';
 import '../providers/auth_provider.dart';
 import '../providers/channel_provider.dart';
+import '../theme/app_theme.dart';
+import '../widgets/app_ui.dart';
 import 'channel_detail_screen.dart';
 import 'login_screen.dart';
 
@@ -12,13 +14,15 @@ class PublicChannelViewerScreen extends StatefulWidget {
   const PublicChannelViewerScreen({super.key, required this.channelId});
 
   @override
-  State<PublicChannelViewerScreen> createState() => _PublicChannelViewerScreenState();
+  State<PublicChannelViewerScreen> createState() =>
+      _PublicChannelViewerScreenState();
 }
 
 class _PublicChannelViewerScreenState extends State<PublicChannelViewerScreen> {
   bool _isLoading = true;
-  String? _errorMessage;
+  String? _error;
   Channel? _channel;
+  bool _isOwner = false;
 
   @override
   void initState() {
@@ -29,118 +33,155 @@ class _PublicChannelViewerScreenState extends State<PublicChannelViewerScreen> {
   Future<void> _loadPublicChannel() async {
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
+      _error = null;
     });
 
-    final prov = context.read<ChannelProvider>();
-    final auth = context.read<AuthProvider>();
-
     try {
-      final channel = await prov.apiService.getChannel(widget.channelId);
-      final isOwner = auth.isAuthenticated && auth.currentUser?.id == channel.ownerId;
-      await prov.selectChannel(channel, isReadOnly: !isOwner);
+      final api = context.read<ChannelProvider>().apiService;
+      final auth = context.read<AuthProvider>();
+      final ch = await api.getChannel(widget.channelId);
 
-      if (mounted) {
-        setState(() {
-          _channel = channel;
-          _isLoading = false;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _channel = ch;
+        _isOwner = auth.currentUser != null && auth.currentUser!.id == ch.ownerId;
+        _isLoading = false;
+      });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = e.toString();
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString().replaceAll('Exception: ', '');
+        _isLoading = false;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+
     if (_isLoading) {
       return Scaffold(
+        appBar: AppBar(
+          title: const Text('Loading Channel...'),
+          actions: const [
+            Padding(
+              padding: EdgeInsets.only(right: 16),
+              child: AppThemeToggleButton(),
+            ),
+          ],
+        ),
         body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(color: Colors.blueAccent),
-              const SizedBox(height: 16),
-              Text(
-                'Loading Channel #${widget.channelId}...',
-                style: const TextStyle(color: Colors.grey),
-              ),
-            ],
+          child: AppSurfaceCard(
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const AppBrandMark(size: 46),
+                const SizedBox(height: 18),
+                CircularProgressIndicator(color: colors.primary),
+                const SizedBox(height: 16),
+                Text(
+                  'Connecting to shared channel #${widget.channelId}...',
+                  style: TextStyle(color: colors.textSecondary, fontSize: 14),
+                ),
+              ],
+            ),
           ),
         ),
       );
     }
 
-    if (_channel != null) {
-      final auth = context.watch<AuthProvider>();
-      final isOwner = auth.isAuthenticated && auth.currentUser?.id == _channel!.ownerId;
-      return ChannelDetailScreen(
-        channel: _channel!,
-        isReadOnly: !isOwner,
-      );
-    }
-
-    // Access Denied / Error state
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Channel #${widget.channelId}'),
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.lock_outline, size: 64, color: Colors.orangeAccent),
-              const SizedBox(height: 16),
-              const Text(
-                'Access Denied or Channel Not Found',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                _errorMessage != null && !_errorMessage!.contains('403')
-                    ? 'Error loading channel: $_errorMessage'
-                    : 'Channel #${widget.channelId} is marked as private or does not exist.\nIf you are the owner, please sign in to access it.',
-                style: const TextStyle(color: Colors.grey, fontSize: 14),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  OutlinedButton.icon(
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Try Again'),
-                    onPressed: _loadPublicChannel,
-                  ),
-                  const SizedBox(width: 16),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.login),
-                    label: const Text('Sign In'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
-                      foregroundColor: Colors.white,
+    if (_error != null || _channel == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Channel Unavailable'),
+          actions: const [
+            Padding(
+              padding: EdgeInsets.only(right: 16),
+              child: AppThemeToggleButton(),
+            ),
+          ],
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 440),
+              child: AppSurfaceCard(
+                padding: const EdgeInsets.all(28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: colors.warning.withValues(alpha: 0.14),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.lock_outline_rounded,
+                        size: 40,
+                        color: colors.warning,
+                      ),
                     ),
-                    onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (_) => const LoginScreen()),
-                      );
-                    },
-                  ),
-                ],
+                    const SizedBox(height: 18),
+                    Text(
+                      'Access Denied or Unavailable',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w700,
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _error ??
+                          'This channel may be private, deleted, or requires signing in.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: colors.textSecondary,
+                        fontSize: 13.5,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: _loadPublicChannel,
+                          icon: const Icon(Icons.refresh_rounded, size: 18),
+                          label: const Text('Retry'),
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const LoginScreen(),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.login_rounded, size: 18),
+                          label: const Text('Sign In'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ],
+            ),
           ),
         ),
-      ),
+      );
+    }
+
+    return ChannelDetailScreen(
+      channel: _channel!,
+      isReadOnly: !_isOwner,
     );
   }
 }

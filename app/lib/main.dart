@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 import 'config.dart';
 import 'providers/auth_provider.dart';
 import 'providers/channel_provider.dart';
+import 'providers/theme_provider.dart';
 import 'services/api_service.dart';
+import 'theme/app_theme.dart';
 import 'views/channels_screen.dart';
 import 'views/login_screen.dart';
 import 'views/public_channel_viewer_screen.dart';
@@ -44,12 +46,17 @@ void main() async {
 
   final apiService = ApiService();
   final authProvider = AuthProvider(apiService: apiService);
-  await authProvider.init();
+  final themeProvider = ThemeProvider();
+  await Future.wait([
+    authProvider.init(),
+    themeProvider.init(),
+  ]);
 
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: authProvider),
+        ChangeNotifierProvider.value(value: themeProvider),
         ChangeNotifierProvider(
           create: (_) => ChannelProvider(apiService: apiService),
         ),
@@ -67,6 +74,7 @@ class ThingLarpApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+    final themeProvider = ThemeProvider.maybeOf(context);
 
     Widget homeScreen;
     if (initialChannelId != null) {
@@ -80,23 +88,9 @@ class ThingLarpApp extends StatelessWidget {
     return MaterialApp(
       title: 'ThingLarp',
       debugShowCheckedModeBanner: false,
-      themeMode: ThemeMode.dark,
-      theme: ThemeData(
-        brightness: Brightness.light,
-        colorSchemeSeed: Colors.blueAccent,
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-        colorSchemeSeed: Colors.blueAccent,
-        scaffoldBackgroundColor: const Color(0xFF0F172A),
-        cardColor: const Color(0xFF1E293B),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF0F172A),
-          elevation: 0,
-        ),
-        useMaterial3: true,
-      ),
+      themeMode: themeProvider?.themeMode ?? ThemeMode.system,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
       home: homeScreen,
     );
   }
