@@ -27,24 +27,27 @@ class _PublicChannelViewerScreenState extends State<PublicChannelViewerScreen> {
   @override
   void initState() {
     super.initState();
-    _loadPublicChannel();
+    Future.microtask(_loadPublicChannel);
   }
 
   Future<void> _loadPublicChannel() async {
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
     try {
-      final api = context.read<ChannelProvider>().apiService;
+      final prov = context.read<ChannelProvider>();
       final auth = context.read<AuthProvider>();
-      final ch = await api.getChannel(widget.channelId);
+      final ch = await prov.apiService.getChannel(widget.channelId);
+      final isOwner = auth.currentUser != null && auth.currentUser!.id == ch.ownerId;
+      await prov.selectChannel(ch, isReadOnly: !isOwner);
 
       if (!mounted) return;
       setState(() {
         _channel = ch;
-        _isOwner = auth.currentUser != null && auth.currentUser!.id == ch.ownerId;
+        _isOwner = isOwner;
         _isLoading = false;
       });
     } catch (e) {

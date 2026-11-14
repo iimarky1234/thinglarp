@@ -30,6 +30,8 @@ class ChannelProvider extends ChangeNotifier {
   Map<String, List<TelemetryPoint>> chartPoints = {};
   Map<String, dynamic> latestValues = {};
   bool isLoading = false;
+  bool isLoadingTelemetry = false;
+  String? telemetryError;
   bool isLiveStreaming = false;
   String currentResolution = 'auto';
   int pointLimit = 100;
@@ -103,6 +105,8 @@ class ChannelProvider extends ChangeNotifier {
     activeChannel = channel;
     chartPoints.clear();
     latestValues.clear();
+    telemetryError = null;
+    isLoadingTelemetry = true;
     lastSyncedAt = null;
     notifyListeners();
 
@@ -187,6 +191,10 @@ class ChannelProvider extends ChangeNotifier {
     final duration = _timeWindowDurations[timeWindow];
     final DateTime? startTime = isAllTime ? null : now.subtract(duration ?? const Duration(hours: 1));
 
+    telemetryError = null;
+    isLoadingTelemetry = true;
+    notifyListeners();
+
     try {
       final dataRes = await apiService.getTelemetry(
         channelId,
@@ -199,10 +207,16 @@ class ChannelProvider extends ChangeNotifier {
       if (activeChannel?.id == channelId) {
         chartPoints = dataRes.fields;
         lastSyncedAt = DateTime.now();
+        isLoadingTelemetry = false;
         notifyListeners();
       }
     } catch (e) {
       debugPrint('Error loading historical telemetry: $e');
+      if (activeChannel?.id == channelId) {
+        telemetryError = e.toString().replaceAll('Exception: ', '');
+        isLoadingTelemetry = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -259,6 +273,16 @@ class ChannelProvider extends ChangeNotifier {
   void stopLiveStream() {
     _cancelPendingSync();
     mqttService.disconnect();
+  }
+
+  /// Detaches the active channel silently when leaving a detail screen so
+  /// returning to it triggers a fresh load and live stream subscription.
+  void clearActiveChannel(int channelId) {
+    if (activeChannel?.id == channelId) {
+      _cancelPendingSync();
+      mqttService.disconnect();
+      activeChannel = null;
+    }
   }
 
   void _cancelPendingSync() {

@@ -557,40 +557,45 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
   }
 
   Widget _buildChannelsGrid(List<Channel> channels, double availableWidth) {
-    const double spacing = 14;
-    final cappedWidth = availableWidth > 1180 ? 1180.0 : availableWidth - 48;
-    int columns = 1;
-    if (availableWidth >= 1040) {
-      columns = 3;
-    } else if (availableWidth >= 680) {
-      columns = 2;
-    }
-    final cardWidth = columns == 1
-        ? double.infinity
-        : (cappedWidth - spacing * (columns - 1)) / columns;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const double spacing = 14;
+        final gridWidth = constraints.maxWidth;
+        int columns = 1;
+        if (availableWidth >= 1040) {
+          columns = 3;
+        } else if (availableWidth >= 680) {
+          columns = 2;
+        }
+        final cardWidth = columns == 1
+            ? double.infinity
+            : (gridWidth - spacing * (columns - 1)) / columns;
 
-    return Wrap(
-      spacing: spacing,
-      runSpacing: spacing,
-      children: channels.map((ch) {
-        final widget = _ChannelCard(
-          channel: ch,
-          onOpen: () async {
-            await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => ChannelDetailScreen(channel: ch),
-              ),
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: channels.map((ch) {
+            final widget = _ChannelCard(
+              channel: ch,
+              onOpen: () async {
+                context.read<ChannelProvider>().selectChannel(ch);
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ChannelDetailScreen(channel: ch),
+                  ),
+                );
+                if (context.mounted) {
+                  context.read<ChannelProvider>().loadChannels();
+                }
+              },
+              onShare: () => _shareChannel(context, ch),
             );
-            if (mounted) {
-              context.read<ChannelProvider>().loadChannels();
-            }
-          },
-          onShare: () => _shareChannel(context, ch),
+            if (columns == 1) return widget;
+            return SizedBox(width: cardWidth, child: widget);
+          }).toList(),
         );
-        if (columns == 1) return widget;
-        return SizedBox(width: cardWidth, child: widget);
-      }).toList(),
+      },
     );
   }
 }
@@ -701,28 +706,46 @@ class _ChannelCard extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              Icon(
-                Icons.calendar_today_outlined,
-                size: 13,
-                color: colors.textTertiary,
+              Expanded(
+                child: Wrap(
+                  spacing: 10,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.calendar_today_outlined,
+                          size: 13,
+                          color: colors.textTertiary,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          dateStr,
+                          style: TextStyle(fontSize: 12, color: colors.textSecondary),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.tune_rounded,
+                          size: 13,
+                          color: colors.textTertiary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${channel.maxFields} fields',
+                          style: TextStyle(fontSize: 12, color: colors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(width: 5),
-              Text(
-                dateStr,
-                style: TextStyle(fontSize: 12, color: colors.textSecondary),
-              ),
-              const SizedBox(width: 12),
-              Icon(
-                Icons.tune_rounded,
-                size: 13,
-                color: colors.textTertiary,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                '${channel.maxFields} fields',
-                style: TextStyle(fontSize: 12, color: colors.textSecondary),
-              ),
-              const Spacer(),
+              const SizedBox(width: 8),
               Text(
                 'Open',
                 style: TextStyle(

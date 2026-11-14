@@ -33,12 +33,22 @@ class ChannelDetailScreen extends StatefulWidget {
 class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   Timer? _pollingTimer;
+  ChannelProvider? _channelProvider;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: widget.isReadOnly ? 1 : 3, vsync: this);
     final prov = context.read<ChannelProvider>();
+    if (prov.activeChannel?.id != widget.channel.id) {
+      Future.microtask(() {
+        if (!mounted) return;
+        final currentProv = context.read<ChannelProvider>();
+        if (currentProv.activeChannel?.id != widget.channel.id) {
+          currentProv.selectChannel(widget.channel, isReadOnly: widget.isReadOnly);
+        }
+      });
+    }
     if (widget.isReadOnly && !prov.apiService.isAuthenticated) {
       _pollingTimer = Timer.periodic(const Duration(seconds: 10), (_) {
         if (mounted) {
@@ -49,8 +59,15 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _channelProvider = context.read<ChannelProvider>();
+  }
+
+  @override
   void dispose() {
     _pollingTimer?.cancel();
+    _channelProvider?.clearActiveChannel(widget.channel.id);
     _tabController.dispose();
     super.dispose();
   }
@@ -1561,16 +1578,87 @@ class _ChannelDetailScreenState extends State<ChannelDetailScreen> with SingleTi
             const SizedBox(height: 24),
           ],
 
-          // Multi-Type Dynamic Widget Cards for each numeric field
-          if (provider.chartPoints.isEmpty)
+          // Error / Loading / Multi-Type Dynamic Widget Cards for each numeric field
+          if (provider.telemetryError != null) ...[
+            AppSurfaceCard(
+              borderColor: colors.danger.withValues(alpha: 0.45),
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline_rounded, color: colors.danger),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Could not load historical telemetry: ${provider.telemetryError}',
+                      style: TextStyle(color: colors.danger, fontSize: 13),
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: () => provider.loadHistoricalData(widget.channel.id),
+                    icon: const Icon(Icons.refresh_rounded, size: 16),
+                    label: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          if (provider.isLoadingTelemetry &&
+              (provider.chartPoints.isEmpty ||
+                  provider.chartPoints.values.every((pts) => pts.isEmpty)))
             const Padding(
-              padding: EdgeInsets.symmetric(vertical: 40),
-              child: Center(
-                child: Text('No telemetry points recorded yet for this channel.'),
+              padding: EdgeInsets.symmetric(vertical: 48),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (provider.chartPoints.isEmpty ||
+              provider.chartPoints.values.every((pts) => pts.isEmpty))
+            AppSurfaceCard(
+              padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
+              child: Column(
+                children: [
+                  Icon(Icons.timeline_rounded, size: 36, color: colors.textTertiary),
+                  const SizedBox(height: 10),
+                  Text(
+                    provider.timeWindow == 'all'
+                        ? 'No telemetry points recorded yet for this channel.'
+                        : 'No telemetry points in the selected window (${provider.timeWindow}).',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w600,
+                      color: colors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 8,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      if (provider.timeWindow != 'all')
+                        ElevatedButton.icon(
+                          onPressed: () => provider.loadHistoricalData(
+                            widget.channel.id,
+                            window: 'all',
+                          ),
+                          icon: const Icon(Icons.history_rounded, size: 17),
+                          label: const Text('Show All Time'),
+                        ),
+                      OutlinedButton.icon(
+                        onPressed: () => provider.refreshTelemetry(widget.channel.id),
+                        icon: const Icon(Icons.refresh_rounded, size: 17),
+                        label: const Text('Refresh'),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             )
           else
-            ...provider.chartPoints.entries.map((entry) {
+            ...provider.chartPoints.entries
+                .where((entry) => entry.value.isNotEmpty)
+                .map((entry) {
               final fieldKey = entry.key;
               final points = entry.value;
               final fieldMeta = provider.fields.firstWhere(
